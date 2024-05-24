@@ -20,6 +20,10 @@ export default {
   plugins: [
     resolve(),
     commonjs(),
-    typescript({ useTsconfigDeclarationDir: true }),
+    typescript({
+      // COMPAT: Without this flag sometimes the declarations are not updated.
+      // clean: isProd ? true : false,
+      clean: true,
+    }),
   ],
 };
