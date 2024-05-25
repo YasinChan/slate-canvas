@@ -1,12 +1,14 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import alias from '@rollup/plugin-alias';
+import terser from '@rollup/plugin-terser';
 import typescript from 'rollup-plugin-typescript2';
 import pkg from './package.json' assert { type: 'json' };
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const isProd = process.env.NODE_ENV === 'production';
 
 export default {
   input: 'src/index.ts',
@@ -33,5 +35,6 @@ export default {
     alias({
       entries: { find: '@', replacement: `${__dirname}/src` },
     }),
+    isProd && terser(),
   ],
 };

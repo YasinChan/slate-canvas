@@ -24,7 +24,8 @@
     "url": "git+https://github.com/YasinChan/slate-canvas.git"
   },
   "scripts": {
-    "build": "rollup -c --watch",
+    "dev": "NODE_ENV=development rollup -c --watch",
+    "build": "NODE_ENV=production rollup -c",
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
     "lint": "eslint \"src/**/*.{ts,js}\"",
     "lint:fix": "eslint \"src/**/*.{ts,js}\" --fix"
@@ -39,6 +40,7 @@
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^25.0.8",
     "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
     "rollup": "^4.18.0",
     "rollup-plugin-typescript2": "^0.36.0"
   },
