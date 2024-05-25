@@ -1,5 +1,3 @@
-import canvas from './components/canvas';
+export * from '@/components/slate-canvas';
 
-export function CreateCanvas(text: string): void {
-  document.body.append(canvas(text));
-}
+export { withCanvas } from '@/plugin/with-canvas';

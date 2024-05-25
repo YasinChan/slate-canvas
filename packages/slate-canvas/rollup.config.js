@@ -1,7 +1,12 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import alias from '@rollup/plugin-alias';
 import typescript from 'rollup-plugin-typescript2';
 import pkg from './package.json' assert { type: 'json' };
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default {
   input: 'src/index.ts',
@@ -24,6 +29,9 @@ export default {
       // COMPAT: Without this flag sometimes the declarations are not updated.
       // clean: isProd ? true : false,
       clean: true,
+    }),
+    alias({
+      entries: { find: '@', replacement: `${__dirname}/src` },
     }),
   ],
 };

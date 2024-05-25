@@ -1,11 +1,14 @@
 {
     "extends": "../../tsconfig.json", // 可选项，可以继承共享的基础配置
     "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["src/*"]
+        },
         "target": "es5",
         "module": "esnext",
         "declaration": true,
         "outDir": "dist",
-        "jsx": "react",
         "strict": true
     },
     "include": ["src/**/*"],
