@@ -1,6 +1,5 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import alias from '@rollup/plugin-alias';
 import terser from '@rollup/plugin-terser';
 import typescript from 'rollup-plugin-typescript2';
 import pkg from './package.json' assert { type: 'json' };
@@ -31,9 +30,8 @@ export default {
       // COMPAT: Without this flag sometimes the declarations are not updated.
       // clean: isProd ? true : false,
       clean: true,
-    }),
-    alias({
-      entries: { find: '@', replacement: `${__dirname}/src` },
+      sourceMap: true,
+      sourceRoot: 'src',
     }),
     isProd && terser(),
   ],

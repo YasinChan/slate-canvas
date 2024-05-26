@@ -27,16 +27,27 @@ import { createEditor } from 'slate';
 //     ],
 //   },
 // ];
+
+// 你好 Hello Привет Bonjour Ciao สวัสดี مرحبًا 안녕하세요 こんにちは.
+// Thai and Arabic are not supported at this time.
 const initialValue = [
   {
     type: 'paragraph',
-    children: [{ text: 'This is editable ' }],
+    children: [
+      {
+        text: '那aaa안녕하세요一天我二十一岁，在我一生的黄金时代，我有好多奢望。我想爱，想吃，还想在一瞬间变成天上半明半暗的云，',
+      },
+      { text: '后来我才知道，', bold: true },
+      {
+        text: '生活就是个缓慢受锤的过程，人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
+      },
+    ],
   },
   {
     type: 'paragraph',
     children: [
       {
-        text: "Since it's rich text, you can do things like turn a selection of text ",
+        text: '你好 Hello Привет Bonjour Ciao 안녕하세요 こんにちは',
       },
     ],
   },
@@ -45,7 +56,8 @@ const initialValue = [
 const cvs = ref<HTMLElement>();
 
 const state = reactive({
-  text: 'slate canvas',
+  text: '你好 Hello Привет Bonjour Ciao 안녕하세요 こんにちは',
+  show: false,
 });
 
 onMounted(() => {
@@ -56,18 +68,44 @@ onMounted(() => {
       width: 500,
       height: 500,
       accuracy: 1,
+      lineHeight: 1.5,
+      padding: 20,
     },
     initialValue: initialValue,
   });
   const canvas = sc.getCanvas();
-  canvas.style.backgroundColor = '#FAFCFD';
+  canvas.style.backgroundColor = 'rgb(184, 190, 196)';
   cvs.value?.appendChild(canvas);
 });
 </script>
 
 <template>
-  <div>{{ state.text }}</div>
+  <div v-if="state.show" class="compare">
+    那aaa안녕하세요一天我二十一岁，在我一生的黄金时代，我有好多奢望。我想爱，想吃，还想在一瞬间变成天上半明半暗的云，<span
+      style="font-weight: bold"
+      >后来我才知道，</span
+    >
+    生活就是个缓慢受锤的过程，人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
+
+    <p>asdf哈哈<span style="font-size: 28px">哈哈asdfasdf</span></p>
+  </div>
   <div ref="cvs"></div>
+  <button @click="state.show = !state.show">
+    {{ state.show ? 'hide' : 'show' }} compare word
+  </button>
 </template>
 
-<style scoped></style>
+<style scoped>
+.compare {
+  position: fixed;
+  text-decoration: underline;
+  top: 0;
+  left: 0;
+  padding: 20px;
+  line-height: 1.5;
+  width: 500px;
+  height: 500px;
+  background-color: rgb(144, 150, 156);
+  opacity: 0.8;
+}
+</style>

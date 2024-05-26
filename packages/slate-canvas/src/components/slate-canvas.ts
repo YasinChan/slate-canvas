@@ -1,18 +1,30 @@
 import { Editor, Node, Scrubber, BaseEditor, Descendant } from 'slate';
-import { createCanvas } from '@/components/create-canvas';
+import { createCanvas } from '../components/create-canvas';
 
 import {
   setAccuracy,
   defaultCanvasOptions,
+  setAccuracyCanvasOptions,
   OptionsType,
   CanvasOptionsType,
-} from '@/utils';
+} from '../utils';
 
 export class SlateCanvas {
-  public canvasOptions: Partial<CanvasOptionsType>;
+  public canvasOptions: Partial<CanvasOptionsType> = {};
   public initialValue: Descendant[];
   private canvas: HTMLCanvasElement | undefined = undefined;
   private ctx: CanvasRenderingContext2D | undefined = undefined;
+  private handledCanvasOptions: CanvasOptionsType = defaultCanvasOptions; // Converts the values in `canvasOptions` in `options` by precision.
+  private initialPosition: { x: number; y: number } = { x: 0, y: 0 }; // The position at which to initially start rendering the content
+  private contentSize: { width: number; height: number } = {
+    width: 0,
+    height: 0,
+  }; // Minus padding content size
+  private currentRenderMiddlePosition: { x: number; y: number } = {
+    x: 0,
+    y: 0,
+  }; // The middle position of the current rendering area
+  private lines: any[] = []; // Record the rendering information of each line
 
   constructor(
     public editor: BaseEditor,
@@ -26,40 +38,14 @@ export class SlateCanvas {
 
     this.initialValue = options.initialValue;
 
-    this.canvasOptions = Object.assign(
-      defaultCanvasOptions,
-      options.canvasOptions,
-    );
-
-    setAccuracy(1, this.canvasOptions.accuracy);
-
     this.check();
+    this.optionsHandler();
     this.init();
   }
 
-  init() {
-    const { canvas, ctx } = createCanvas(this.editor, this.canvasOptions);
-    this.canvas = canvas;
-    this.ctx = ctx;
-
-    // this.initialValue.forEach(item => {
-    //   if ('children' in item) {
-    //     console.log(item.children); // 这里 TypeScript 知道 item 是 Element 类型
-    //   } else {
-    //     console.log(item.text); // 这里 TypeScript 知道 item 是 Text 类型
-    //   }
-    // });
-    if ('children' in this.initialValue[0]) {
-      if ('text' in this.initialValue[0].children[0]) {
-        ctx.fillText(
-          this.initialValue[0].children[0]?.text,
-          setAccuracy(10),
-          setAccuracy(50),
-        );
-      }
-    }
-  }
-
+  /**
+   * check initialValue and editor
+   */
   check() {
     if (!Node.isNodeList(this.initialValue)) {
       throw new Error(
@@ -73,6 +59,176 @@ export class SlateCanvas {
         `[Slate] editor is invalid! You passed: ${Scrubber.stringify(this.editor)}`,
       );
     }
+  }
+
+  /**
+   * Numeric information in canvas settings requires accuracy conversion.
+   */
+  optionsHandler() {
+    this.canvasOptions = Object.assign(
+      defaultCanvasOptions,
+      this.options.canvasOptions,
+    );
+    const accuracy = this.canvasOptions.accuracy;
+    // Set canvas accuracy.
+    setAccuracy(1, accuracy);
+
+    setAccuracyCanvasOptions.forEach((key) => {
+      if (this.canvasOptions[key] !== undefined) {
+        if (key === 'width') {
+          this.handledCanvasOptions['styleWidth'] = this.canvasOptions[
+            key
+          ] as number;
+        }
+        if (key === 'height') {
+          this.handledCanvasOptions['styleHeight'] = this.canvasOptions[
+            key
+          ] as number;
+        }
+        this.handledCanvasOptions[key] = setAccuracy(
+          this.canvasOptions[key] as number,
+        );
+      }
+    });
+  }
+
+  init() {
+    const { canvas, ctx } = createCanvas(
+      this.editor,
+      this.handledCanvasOptions,
+    );
+    this.canvas = canvas;
+    this.ctx = ctx;
+
+    this.render();
+  }
+
+  render() {
+    const paddingTop =
+      this.handledCanvasOptions.paddingTop ||
+      this.handledCanvasOptions.padding ||
+      20;
+    const paddingLeft =
+      this.handledCanvasOptions.paddingLeft ||
+      this.handledCanvasOptions.padding ||
+      20;
+    this.initialPosition = {
+      x: paddingLeft,
+      y: paddingTop,
+    };
+    this.contentSize = {
+      width: this.handledCanvasOptions.width - paddingLeft * 2,
+      height: this.handledCanvasOptions.height - paddingTop * 2,
+    };
+
+    // this.initialValue.forEach(item => {
+    //   if ('children' in item) {
+    //     console.log(item.children); // 这里 TypeScript 知道 item 是 Element 类型
+    //   } else {
+    //     console.log(item.text); // 这里 TypeScript 知道 item 是 Text 类型
+    //   }
+    // });
+    if ('children' in this.initialValue[0]) {
+      if ('text' in this.initialValue[0].children[0]) {
+        const t = this.initialValue[0].children[0]?.text;
+        this.fillText(t);
+      }
+    }
+  }
+
+  fillText(text: string) {
+    if (!this.ctx) {
+      return;
+    }
+    const {
+      width,
+      actualBoundingBoxAscent,
+      actualBoundingBoxDescent,
+    }: TextMetrics = this.ctx.measureText(text);
+
+    const { width: contentWidth, height: contentHeight } = this.contentSize;
+
+    // real text height, see https://developer.mozilla.org/en-US/docs/Web/API/TextMetrics
+    const textHeight = actualBoundingBoxAscent + actualBoundingBoxDescent;
+    let lineHeight = this.handledCanvasOptions.lineHeight;
+    if (typeof lineHeight === 'number') {
+      // like 1.5
+      lineHeight = lineHeight * textHeight;
+    }
+    if (typeof lineHeight === 'string') {
+      // like '20px'
+      lineHeight = setAccuracy(Number(lineHeight.replace('px', '')));
+    }
+
+    const textPosition = {
+      x: this.initialPosition.x,
+      y: this.initialPosition.y + lineHeight / 2,
+    };
+
+    if (width <= contentWidth) {
+      this.lines.push({
+        text,
+        textPosition,
+      });
+    } else {
+      let splitLength = 0; // one line text length;
+      const ratio = contentWidth / width;
+      const textLength = text.length;
+      const aboutLength = Math.round(textLength * ratio);
+
+      const { width: beforeWidth } = this.ctx.measureText(
+        text.substring(0, aboutLength),
+      );
+
+      if (beforeWidth <= contentWidth) {
+        let w = beforeWidth;
+        let i = aboutLength;
+        while (w <= contentWidth) {
+          const { width: newBeforeWidth } = this.ctx.measureText(
+            text.substring(0, ++i),
+          );
+          w = newBeforeWidth;
+        }
+        splitLength = i - 1;
+      } else {
+        let w = beforeWidth;
+        let i = aboutLength;
+        while (w > contentWidth) {
+          const { width: newBeforeWidth } = this.ctx.measureText(
+            text.substring(0, --i),
+          );
+          w = newBeforeWidth;
+        }
+        splitLength = i + 1;
+      }
+      this.lines.push({
+        text: text.substring(0, splitLength),
+        textPosition,
+      });
+      this.lines.push({
+        text: text.substring(splitLength),
+        textPosition: {
+          x: textPosition.x,
+          y: textPosition.y + lineHeight,
+        },
+      });
+    }
+    this.lines.forEach((line) => {
+      this.ctx!.fillText(line.text, line.textPosition.x, line.textPosition.y);
+    });
+
+    // this.ctx.save();
+    // this.ctx.beginPath();
+    // this.ctx.moveTo(
+    //   this.initialPosition.x,
+    //   this.initialPosition.y + lineHeight,
+    // );
+    // this.ctx.lineTo(
+    //   this.initialPosition.x + width,
+    //   this.initialPosition.y + lineHeight,
+    // );
+    // this.ctx.stroke();
+    // this.ctx.restore();
   }
 
   getCanvas() {

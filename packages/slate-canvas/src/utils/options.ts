@@ -1,20 +1,33 @@
 import { Descendant } from 'slate';
 
-export type CanvasOptionsType = {
-  width: number;
-  height: number;
+export type setAccuracyCanvasOptionKeys =
+  | 'width'
+  | 'height'
+  | 'fontSize'
+  | 'padding'
+  | 'paddingTop'
+  | 'paddingRight'
+  | 'paddingBottom'
+  | 'paddingLeft';
+
+export type setAccuracyCanvasOptions = {
+  [key in setAccuracyCanvasOptionKeys]: number;
+};
+
+export type CanvasOptionsType = setAccuracyCanvasOptions & {
+  styleWidth: number;
+  styleHeight: number;
   accuracy: number;
-  fontSize: number;
+  fontVariant: string;
   fontFamily: string;
   fontWeight: string;
+  lineHeight: number | string; // 1.5 or '20px'
   fontStyle: string;
   textAlign: CanvasTextAlign;
   textBaseline: CanvasTextBaseline;
   color: string;
   backgroundColor: string;
-  lineHeight: number;
   text: string;
-  padding: number;
 };
 
 export interface OptionsType {
@@ -23,11 +36,14 @@ export interface OptionsType {
 }
 
 export const defaultCanvasOptions: CanvasOptionsType = {
-  width: 100,
-  height: 100,
+  width: 200,
+  height: 200,
+  styleWidth: 100,
+  styleHeight: 100,
   accuracy: 1,
   fontSize: 16,
-  fontFamily: 'Inter, system-ui, Avenir, Helvetica, Arial, sans-serif',
+  fontVariant: 'normal',
+  fontFamily: 'sans-serif',
   fontWeight: 'normal',
   fontStyle: 'normal',
   textAlign: 'center',
@@ -36,5 +52,20 @@ export const defaultCanvasOptions: CanvasOptionsType = {
   backgroundColor: '#fff',
   lineHeight: 1.5,
   text: '',
-  padding: 20,
+  padding: 0,
+  paddingTop: 0,
+  paddingRight: 0,
+  paddingBottom: 0,
+  paddingLeft: 0,
 };
+
+export const setAccuracyCanvasOptions: setAccuracyCanvasOptionKeys[] = [
+  'width',
+  'height',
+  'fontSize',
+  'padding',
+  'paddingTop',
+  'paddingRight',
+  'paddingBottom',
+  'paddingLeft',
+];

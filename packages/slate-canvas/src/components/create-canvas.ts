@@ -1,5 +1,5 @@
 import { BaseEditor } from 'slate';
-import { setAccuracy, defaultCanvasOptions, CanvasOptionsType } from '@/utils';
+import { createFontValue, CanvasOptionsType } from '../utils';
 
 export type CreateCanvasReturnType = {
   canvas: HTMLCanvasElement;
@@ -8,22 +8,21 @@ export type CreateCanvasReturnType = {
 
 export const createCanvas = (
   editor: BaseEditor,
-  canvasOptions: Partial<CanvasOptionsType>,
+  handledCanvasOptions: CanvasOptionsType,
 ): CreateCanvasReturnType => {
-  const { width, height, fontFamily, fontSize } = Object.assign(
-    defaultCanvasOptions,
-    canvasOptions,
-  );
+  const { width, height, styleWidth, styleHeight } = handledCanvasOptions;
 
   const canvas: HTMLCanvasElement = document.createElement('canvas');
-  canvas.width = setAccuracy(width);
-  canvas.height = setAccuracy(height);
-  canvas.style.width = width + 'px';
-  canvas.style.height = height + 'px';
+  canvas.width = width;
+  canvas.height = height;
+  canvas.style.width = styleWidth + 'px';
+  canvas.style.height = styleHeight + 'px';
 
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-  ctx.font = `${setAccuracy(fontSize)}px ${fontFamily}`;
+  ctx.textBaseline = 'middle';
+
+  ctx.font = createFontValue(handledCanvasOptions);
 
   return { canvas, ctx };
 };
