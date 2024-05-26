@@ -5,6 +5,7 @@ import {
   setAccuracy,
   defaultCanvasOptions,
   setAccuracyCanvasOptions,
+  createFontValue,
   OptionsType,
   CanvasOptionsType,
 } from '../utils';
@@ -103,6 +104,13 @@ export class SlateCanvas {
     this.render();
   }
 
+  reset() {
+    if (!this.ctx) {
+      return;
+    }
+    this.ctx.font = createFontValue({});
+  }
+
   render() {
     const paddingTop =
       this.handledCanvasOptions.paddingTop ||
@@ -121,13 +129,22 @@ export class SlateCanvas {
       height: this.handledCanvasOptions.height - paddingTop * 2,
     };
 
-    // this.initialValue.forEach(item => {
-    //   if ('children' in item) {
-    //     console.log(item.children); // 这里 TypeScript 知道 item 是 Element 类型
-    //   } else {
-    //     console.log(item.text); // 这里 TypeScript 知道 item 是 Text 类型
-    //   }
-    // });
+    this.initialValue.forEach((item) => {
+      this.reset();
+      if ('children' in item) {
+        item.children.forEach((child) => {
+          if ('bold' in child) {
+            this.ctx!.font = createFontValue({
+              fontWeight: 'bold',
+            });
+          }
+          if ('text' in child) {
+            this.calculateLines(child.text);
+            // this.fillText(child.text);
+          }
+        });
+      }
+    });
     if ('children' in this.initialValue[0]) {
       if ('text' in this.initialValue[0].children[0]) {
         const t = this.initialValue[0].children[0]?.text;
@@ -136,7 +153,7 @@ export class SlateCanvas {
     }
   }
 
-  fillText(text: string) {
+  calculateLines(text: string) {
     if (!this.ctx) {
       return;
     }
@@ -145,6 +162,13 @@ export class SlateCanvas {
       actualBoundingBoxAscent,
       actualBoundingBoxDescent,
     }: TextMetrics = this.ctx.measureText(text);
+
+    console.log(
+      '----------',
+      'this.ctx.measureText(text)',
+      this.ctx.measureText(text),
+      '----------cyy log',
+    );
 
     const { width: contentWidth, height: contentHeight } = this.contentSize;
 
@@ -229,6 +253,12 @@ export class SlateCanvas {
     // );
     // this.ctx.stroke();
     // this.ctx.restore();
+  }
+
+  fillText(text: string) {
+    if (!this.ctx) {
+      return;
+    }
   }
 
   getCanvas() {

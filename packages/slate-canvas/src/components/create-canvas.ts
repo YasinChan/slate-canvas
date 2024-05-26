@@ -1,5 +1,5 @@
 import { BaseEditor } from 'slate';
-import { createFontValue, CanvasOptionsType } from '../utils';
+import { initCreateFontValue, CanvasOptionsType } from '../utils';
 
 export type CreateCanvasReturnType = {
   canvas: HTMLCanvasElement;
@@ -20,9 +20,9 @@ export const createCanvas = (
 
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-  ctx.textBaseline = 'middle';
+  // ctx.textBaseline = 'middle';
 
-  ctx.font = createFontValue(handledCanvasOptions);
+  ctx.font = initCreateFontValue(handledCanvasOptions);
 
   return { canvas, ctx };
 };

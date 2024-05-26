@@ -1,5 +1,4 @@
-import { CanvasOptionsType } from '@/utils';
-
+import { CanvasOptionsType, defaultCanvasOptions } from './options';
 export * from './options';
 
 let accuracy: number = 1;
@@ -16,16 +15,36 @@ export function setAccuracy(num: number, acy?: number): number {
   return num * dpr;
 }
 
-export function createFontValue(
+let fontStyleDefault: string = defaultCanvasOptions.fontStyle;
+let fontVariantDefault: string = defaultCanvasOptions.fontVariant;
+let fontWeightDefault: string = defaultCanvasOptions.fontWeight;
+let fontSizeDefault: number = defaultCanvasOptions.fontSize;
+let lineHeightDefault: string | number = defaultCanvasOptions.lineHeight;
+let fontFamilyDefault: string = defaultCanvasOptions.fontFamily;
+
+export function initCreateFontValue(
   handledCanvasOptions: CanvasOptionsType,
 ): string {
+  fontStyleDefault = handledCanvasOptions.fontStyle || fontStyleDefault;
+  fontVariantDefault = handledCanvasOptions.fontVariant || fontVariantDefault;
+  fontWeightDefault = handledCanvasOptions.fontWeight || fontWeightDefault;
+  fontSizeDefault = handledCanvasOptions.fontSize || fontSizeDefault;
+  lineHeightDefault = handledCanvasOptions.lineHeight || lineHeightDefault;
+  fontFamilyDefault = handledCanvasOptions.fontFamily || fontFamilyDefault;
+
+  return `${fontStyleDefault} ${fontVariantDefault} ${fontWeightDefault} ${fontSizeDefault}px/${lineHeightDefault} ${fontFamilyDefault}`;
+}
+
+export function createFontValue(
+  handledCanvasOptions: Partial<CanvasOptionsType>,
+): string {
   const {
-    fontStyle,
-    fontVariant,
-    fontWeight,
-    fontSize,
-    lineHeight,
-    fontFamily,
+    fontStyle = fontStyleDefault,
+    fontVariant = fontVariantDefault,
+    fontWeight = fontWeightDefault,
+    fontSize = fontSizeDefault,
+    lineHeight = lineHeightDefault,
+    fontFamily = fontFamilyDefault,
   } = handledCanvasOptions;
 
   return `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}px/${lineHeight} ${fontFamily}`;
