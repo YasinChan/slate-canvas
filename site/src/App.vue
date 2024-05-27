@@ -3,6 +3,13 @@ import { ref, onMounted, reactive } from 'vue';
 import { SlateCanvas, withCanvas } from 'slate-canvas';
 import { createEditor } from 'slate';
 
+const state = reactive({
+  text1:
+    '那aaa안녕하세요一天我二十一岁，在我一生的黄金时代，我有asdfasdf好多奢望。我想爱，想吃，还想在一瞬间变成天上半明半暗的云，后来我才知道，',
+  text: '你好 Hello Привет Bonjour Ciao 안녕하세요 こんにちは',
+  show: false,
+});
+
 // const initialValue = [
 //   {
 //     type: 'paragraph',
@@ -35,30 +42,25 @@ const initialValue = [
     type: 'paragraph',
     children: [
       {
-        text: '那aaa안녕하세요一天我二十一岁，在我一生的黄金时代，我有好多奢望。我想爱，想吃，还想在一瞬间变成天上半明半暗的云，',
+        text: state.text1,
       },
-      { text: '后来我才知道，', bold: true },
-      {
-        text: '生活就是个缓慢受锤的过程，人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
-      },
+      { text: '生活就是个缓慢受锤的过程，', bold: true },
+      // {
+      //   text: '人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
+      // },
     ],
   },
-  {
-    type: 'paragraph',
-    children: [
-      {
-        text: '你好 Hello Привет Bonjour Ciao 안녕하세요 こんにちは',
-      },
-    ],
-  },
+  // {
+  //   type: 'paragraph',
+  //   children: [
+  //     {
+  //       text: '你好 Hello Привет Bonjour Ciao 안녕하세요 こんにちは',
+  //     },
+  //   ],
+  // },
 ];
 
 const cvs = ref<HTMLElement>();
-
-const state = reactive({
-  text: '你好 Hello Привет Bonjour Ciao 안녕하세요 こんにちは',
-  show: false,
-});
 
 onMounted(() => {
   const editor = withCanvas(createEditor());
@@ -81,11 +83,9 @@ onMounted(() => {
 
 <template>
   <div v-if="state.show" class="compare">
-    那aaa안녕하세요一天我二十一岁，在我一生的黄金时代，我有好多奢望。我想爱，想吃，还想在一瞬间变成天上半明半暗的云，<span
-      style="font-weight: bold"
-      >后来我才知道，</span
-    >
-    生活就是个缓慢受锤的过程，人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
+    {{ state.text1
+    }}<span style="font-weight: bold">生活就是个缓慢受锤的过程，</span>
+    人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
 
     <p>asdf哈哈<span style="font-size: 28px">哈哈asdfasdf</span></p>
   </div>
@@ -97,6 +97,7 @@ onMounted(() => {
 
 <style scoped>
 .compare {
+  word-break: break-all;
   position: fixed;
   text-decoration: underline;
   top: 0;

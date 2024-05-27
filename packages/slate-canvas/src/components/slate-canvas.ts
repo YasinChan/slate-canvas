@@ -10,6 +10,16 @@ import {
   CanvasOptionsType,
 } from '../utils';
 
+type TextItemType = {
+  text: string;
+  font?: string;
+  x: number;
+};
+type LinesType = {
+  textBaseLineY: number;
+  items: TextItemType[];
+};
+
 export class SlateCanvas {
   public canvasOptions: Partial<CanvasOptionsType> = {};
   public initialValue: Descendant[];
@@ -21,11 +31,13 @@ export class SlateCanvas {
     width: 0,
     height: 0,
   }; // Minus padding content size
-  private currentRenderMiddlePosition: { x: number; y: number } = {
+  private currentRenderBaselinePosition: { x: number; y: number } = {
     x: 0,
     y: 0,
-  }; // The middle position of the current rendering area
-  private lines: any[] = []; // Record the rendering information of each line
+  }; // The `textBaseline: alphabetic` position of the current rendering area
+  private currentLineIndex: number = -1; // index of lines currently being rendered
+  private lines: LinesType[] = []; // Record the rendering information of each line
+  private isJustBreakLine: boolean = true; // this is a flag whether a line break has just been completed
 
   constructor(
     public editor: BaseEditor,
@@ -33,9 +45,6 @@ export class SlateCanvas {
   ) {
     this.editor = editor;
     this.options = options;
-
-    console.log('----------', 'editor', this.editor, '----------cyy log');
-    console.log('----------', 'options', this.options, '----------cyy log');
 
     this.initialValue = options.initialValue;
 
@@ -120,7 +129,7 @@ export class SlateCanvas {
       this.handledCanvasOptions.paddingLeft ||
       this.handledCanvasOptions.padding ||
       20;
-    this.initialPosition = {
+    this.currentRenderBaselinePosition = this.initialPosition = {
       x: paddingLeft,
       y: paddingTop,
     };
@@ -130,21 +139,39 @@ export class SlateCanvas {
     };
 
     this.initialValue.forEach((item) => {
-      this.reset();
+      this.currentLineIndex++;
+      this.isJustBreakLine = true;
       if ('children' in item) {
         item.children.forEach((child) => {
+          this.reset();
+          let font = '';
           if ('bold' in child) {
-            this.ctx!.font = createFontValue({
+            font = createFontValue({
               fontWeight: 'bold',
             });
+            this.ctx!.font = font;
           }
           if ('text' in child) {
-            this.calculateLines(child.text);
-            // this.fillText(child.text);
+            const info: { font?: string } = {};
+            font && (info['font'] = font);
+            this.calculateLines(child.text, info);
           }
         });
       }
     });
+
+    console.log('----------', 'this.lines', this.lines, '----------cyy log');
+    this.ctx!.restore();
+    this.lines.forEach((line) => {
+      line.items.forEach((lineItem: any) => {
+        this.ctx!.font = '';
+        if (lineItem.font) {
+          this.ctx!.font = lineItem.font;
+        }
+        this.ctx!.fillText(lineItem.text, lineItem.x, line.textBaseLineY);
+      });
+    });
+
     if ('children' in this.initialValue[0]) {
       if ('text' in this.initialValue[0].children[0]) {
         const t = this.initialValue[0].children[0]?.text;
@@ -153,22 +180,20 @@ export class SlateCanvas {
     }
   }
 
-  calculateLines(text: string) {
+  calculateLines(
+    text: string,
+    info: { font?: string } = {},
+    recursive: boolean = false,
+  ) {
     if (!this.ctx) {
       return;
     }
+
     const {
       width,
       actualBoundingBoxAscent,
       actualBoundingBoxDescent,
     }: TextMetrics = this.ctx.measureText(text);
-
-    console.log(
-      '----------',
-      'this.ctx.measureText(text)',
-      this.ctx.measureText(text),
-      '----------cyy log',
-    );
 
     const { width: contentWidth, height: contentHeight } = this.contentSize;
 
@@ -184,62 +209,71 @@ export class SlateCanvas {
       lineHeight = setAccuracy(Number(lineHeight.replace('px', '')));
     }
 
-    const textPosition = {
-      x: this.initialPosition.x,
-      y: this.initialPosition.y + lineHeight / 2,
-    };
+    if (this.isJustBreakLine) {
+      this.isJustBreakLine = false;
 
-    if (width <= contentWidth) {
-      this.lines.push({
-        text,
-        textPosition,
-      });
+      this.currentRenderBaselinePosition.x = this.initialPosition.x;
+      if (this.currentLineIndex === 0) {
+        // `textY` is the relative vertical position of the calculated baseline based on `textBaseline: alphabetic` in this line.
+        const textY: number =
+          (lineHeight - textHeight) / 2 + actualBoundingBoxAscent;
+        this.currentRenderBaselinePosition.y += textY;
+      } else {
+        this.currentRenderBaselinePosition.y += lineHeight;
+      }
+
+      const splitLength = this.getSplitLength(contentWidth, width, text);
+
+      this.lines[this.currentLineIndex] = this.lines[this.currentLineIndex] || {
+        textBaseLineY: 0,
+        items: [],
+      };
+
+      this.lines[this.currentLineIndex].items.push(
+        Object.assign(
+          {
+            text: text.substring(0, splitLength),
+            x: this.currentRenderBaselinePosition.x,
+          },
+          info,
+        ),
+      );
+      this.lines[this.currentLineIndex].textBaseLineY =
+        this.currentRenderBaselinePosition.y;
+
+      if (splitLength === text.length) {
+        // this means the text can all be rendered in this line.
+        this.currentRenderBaselinePosition.x += width;
+      } else {
+        this.currentLineIndex++;
+        this.isJustBreakLine = true;
+        this.calculateLines(text.substring(splitLength), info, true);
+      }
     } else {
-      let splitLength = 0; // one line text length;
-      const ratio = contentWidth / width;
-      const textLength = text.length;
-      const aboutLength = Math.round(textLength * ratio);
+      const leftWidth =
+        contentWidth -
+        (this.currentRenderBaselinePosition.x - this.initialPosition.x);
+      const splitLength = this.getSplitLength(leftWidth, width, text);
 
-      const { width: beforeWidth } = this.ctx.measureText(
-        text.substring(0, aboutLength),
+      this.lines[this.currentLineIndex].items.push(
+        Object.assign(
+          {
+            text: text.substring(0, splitLength),
+            x: this.currentRenderBaselinePosition.x,
+          },
+          info,
+        ),
+      );
+      debugger;
+      this.lines[this.currentLineIndex].textBaseLineY = Math.max(
+        this.lines[this.currentLineIndex].textBaseLineY,
+        this.currentRenderBaselinePosition.y,
       );
 
-      if (beforeWidth <= contentWidth) {
-        let w = beforeWidth;
-        let i = aboutLength;
-        while (w <= contentWidth) {
-          const { width: newBeforeWidth } = this.ctx.measureText(
-            text.substring(0, ++i),
-          );
-          w = newBeforeWidth;
-        }
-        splitLength = i - 1;
-      } else {
-        let w = beforeWidth;
-        let i = aboutLength;
-        while (w > contentWidth) {
-          const { width: newBeforeWidth } = this.ctx.measureText(
-            text.substring(0, --i),
-          );
-          w = newBeforeWidth;
-        }
-        splitLength = i + 1;
+      if (splitLength === text.length) {
+        // todo
       }
-      this.lines.push({
-        text: text.substring(0, splitLength),
-        textPosition,
-      });
-      this.lines.push({
-        text: text.substring(splitLength),
-        textPosition: {
-          x: textPosition.x,
-          y: textPosition.y + lineHeight,
-        },
-      });
     }
-    this.lines.forEach((line) => {
-      this.ctx!.fillText(line.text, line.textPosition.x, line.textPosition.y);
-    });
 
     // this.ctx.save();
     // this.ctx.beginPath();
@@ -253,6 +287,56 @@ export class SlateCanvas {
     // );
     // this.ctx.stroke();
     // this.ctx.restore();
+  }
+
+  /**
+   * When the word width is greater than the content width,
+   * an algorithm to derive how many length of characters can be rendered in a line
+   * @param contentWidth
+   * @param width
+   * @param text
+   */
+  getSplitLength(contentWidth: number, width: number, text: string): number {
+    if (!this.ctx) {
+      return 0;
+    }
+
+    const textLength = text.length;
+
+    if (width <= contentWidth) {
+      return textLength;
+    }
+
+    let splitLength = 0; // one line text length;
+    const ratio = contentWidth / width;
+    const aboutLength = Math.round(textLength * ratio);
+
+    const { width: beforeWidth } = this.ctx.measureText(
+      text.substring(0, aboutLength),
+    );
+
+    if (beforeWidth <= contentWidth) {
+      let w = beforeWidth;
+      let i = aboutLength;
+      while (w <= contentWidth) {
+        const { width: newBeforeWidth } = this.ctx.measureText(
+          text.substring(0, ++i),
+        );
+        w = newBeforeWidth;
+      }
+      splitLength = i - 1;
+    } else {
+      let w = beforeWidth;
+      let i = aboutLength;
+      while (w > contentWidth) {
+        const { width: newBeforeWidth } = this.ctx.measureText(
+          text.substring(0, --i),
+        );
+        w = newBeforeWidth;
+      }
+      splitLength = i;
+    }
+    return splitLength;
   }
 
   fillText(text: string) {

@@ -24,5 +24,7 @@ export const createCanvas = (
 
   ctx.font = initCreateFontValue(handledCanvasOptions);
 
+  ctx.save();
+
   return { canvas, ctx };
 };
