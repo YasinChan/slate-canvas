@@ -45,9 +45,9 @@ const initialValue = [
         text: state.text1,
       },
       { text: '生活就是个缓慢受锤的过程，', bold: true },
-      // {
-      //   text: '人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
-      // },
+      {
+        text: '人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
+      },
     ],
   },
   // {
@@ -84,7 +84,9 @@ onMounted(() => {
 <template>
   <div v-if="state.show" class="compare">
     {{ state.text1
-    }}<span style="font-weight: bold">生活就是个缓慢受锤的过程，</span>
+    }}<span style="font-weight: bold; font-size: 30px"
+      >生活就是个缓慢受锤的过程，</span
+    >
     人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
 
     <p>asdf哈哈<span style="font-size: 28px">哈哈asdfasdf</span></p>

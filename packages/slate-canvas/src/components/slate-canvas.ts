@@ -16,7 +16,9 @@ type TextItemType = {
   x: number;
 };
 type LinesType = {
-  textBaseLineY: number;
+  baseLineY: number; // The relative vertical position of the calculated baseline based on `textBaseline: alphabetic` to the top of the canvas.
+  topY: number; // The relative vertical position of this line top to the top of the canvas.
+  height: number; // The height of this line
   items: TextItemType[];
 };
 
@@ -31,10 +33,8 @@ export class SlateCanvas {
     width: 0,
     height: 0,
   }; // Minus padding content size
-  private currentRenderBaselinePosition: { x: number; y: number } = {
-    x: 0,
-    y: 0,
-  }; // The `textBaseline: alphabetic` position of the current rendering area
+  private currentRenderingBaselineX: number = 0;
+  private currentLineMaxBaseLineY: number = 0;
   private currentLineIndex: number = -1; // index of lines currently being rendered
   private lines: LinesType[] = []; // Record the rendering information of each line
   private isJustBreakLine: boolean = true; // this is a flag whether a line break has just been completed
@@ -118,6 +118,7 @@ export class SlateCanvas {
       return;
     }
     this.ctx.font = createFontValue({});
+    this.ctx!.restore();
   }
 
   render() {
@@ -129,16 +130,18 @@ export class SlateCanvas {
       this.handledCanvasOptions.paddingLeft ||
       this.handledCanvasOptions.padding ||
       20;
-    this.currentRenderBaselinePosition = this.initialPosition = {
+    this.initialPosition = {
       x: paddingLeft,
       y: paddingTop,
     };
+    this.currentRenderingBaselineX = paddingLeft;
     this.contentSize = {
       width: this.handledCanvasOptions.width - paddingLeft * 2,
       height: this.handledCanvasOptions.height - paddingTop * 2,
     };
 
     this.initialValue.forEach((item) => {
+      this.reset();
       this.currentLineIndex++;
       this.isJustBreakLine = true;
       if ('children' in item) {
@@ -146,10 +149,12 @@ export class SlateCanvas {
           this.reset();
           let font = '';
           if ('bold' in child) {
+            this.ctx!.save();
             font = createFontValue({
               fontWeight: 'bold',
+              fontSize: 60,
             });
-            this.ctx!.font = font;
+            // this.ctx!.font = font;
           }
           if ('text' in child) {
             const info: { font?: string } = {};
@@ -164,11 +169,13 @@ export class SlateCanvas {
     this.ctx!.restore();
     this.lines.forEach((line) => {
       line.items.forEach((lineItem: any) => {
-        this.ctx!.font = '';
+        this.ctx!.restore();
+        // this.ctx!.font = '';
         if (lineItem.font) {
+          this.ctx!.save();
           this.ctx!.font = lineItem.font;
         }
-        this.ctx!.fillText(lineItem.text, lineItem.x, line.textBaseLineY);
+        this.ctx!.fillText(lineItem.text, lineItem.x, line.baseLineY);
       });
     });
 
@@ -188,6 +195,7 @@ export class SlateCanvas {
     if (!this.ctx) {
       return;
     }
+    info.font && (this.ctx.font = info.font);
 
     const {
       width,
@@ -209,70 +217,85 @@ export class SlateCanvas {
       lineHeight = setAccuracy(Number(lineHeight.replace('px', '')));
     }
 
+    // `textY` is the relative vertical position of the calculated baseline based on `textBaseline: alphabetic` in this line.
+    const textY: number =
+      (lineHeight - textHeight) / 2 + actualBoundingBoxAscent;
+
+    this.currentLineMaxBaseLineY = Math.max(
+      this.currentLineMaxBaseLineY,
+      textY,
+    );
+
+    let baseLineY: number; // record the baseLineY of the current line
+    if (this.currentLineIndex === 0) {
+      baseLineY = this.initialPosition.y + this.currentLineMaxBaseLineY;
+    } else {
+      const lastLine = this.lines[this.currentLineIndex - 1];
+      baseLineY =
+        lastLine.topY + lastLine.height + this.currentLineMaxBaseLineY;
+    }
+
+    let splitLength: number;
     if (this.isJustBreakLine) {
+      // New line, so rendering from the beginning of the line.
       this.isJustBreakLine = false;
 
-      this.currentRenderBaselinePosition.x = this.initialPosition.x;
-      if (this.currentLineIndex === 0) {
-        // `textY` is the relative vertical position of the calculated baseline based on `textBaseline: alphabetic` in this line.
-        const textY: number =
-          (lineHeight - textHeight) / 2 + actualBoundingBoxAscent;
-        this.currentRenderBaselinePosition.y += textY;
-      } else {
-        this.currentRenderBaselinePosition.y += lineHeight;
-      }
+      this.currentRenderingBaselineX = this.initialPosition.x;
 
-      const splitLength = this.getSplitLength(contentWidth, width, text);
-
-      this.lines[this.currentLineIndex] = this.lines[this.currentLineIndex] || {
-        textBaseLineY: 0,
-        items: [],
-      };
-
-      this.lines[this.currentLineIndex].items.push(
-        Object.assign(
-          {
-            text: text.substring(0, splitLength),
-            x: this.currentRenderBaselinePosition.x,
-          },
-          info,
-        ),
-      );
-      this.lines[this.currentLineIndex].textBaseLineY =
-        this.currentRenderBaselinePosition.y;
-
-      if (splitLength === text.length) {
-        // this means the text can all be rendered in this line.
-        this.currentRenderBaselinePosition.x += width;
-      } else {
-        this.currentLineIndex++;
-        this.isJustBreakLine = true;
-        this.calculateLines(text.substring(splitLength), info, true);
-      }
+      splitLength = this.getSplitLength(contentWidth, width, text);
     } else {
+      // Keep rendering on this line.
       const leftWidth =
         contentWidth -
-        (this.currentRenderBaselinePosition.x - this.initialPosition.x);
-      const splitLength = this.getSplitLength(leftWidth, width, text);
+        (this.currentRenderingBaselineX - this.initialPosition.x);
+      splitLength = this.getSplitLength(leftWidth, width, text);
+    }
 
-      this.lines[this.currentLineIndex].items.push(
-        Object.assign(
-          {
-            text: text.substring(0, splitLength),
-            x: this.currentRenderBaselinePosition.x,
-          },
-          info,
-        ),
-      );
-      debugger;
-      this.lines[this.currentLineIndex].textBaseLineY = Math.max(
-        this.lines[this.currentLineIndex].textBaseLineY,
-        this.currentRenderBaselinePosition.y,
-      );
+    this.lines[this.currentLineIndex] = this.lines[this.currentLineIndex] || {
+      baseLineY: 0,
+      topY: 0,
+      height: 0,
+      items: [],
+    };
 
-      if (splitLength === text.length) {
-        // todo
-      }
+    this.lines[this.currentLineIndex].items.push(
+      Object.assign(
+        {
+          text: text.substring(0, splitLength),
+          x: this.currentRenderingBaselineX,
+        },
+        info,
+      ),
+    );
+
+    // set current line baseLineY
+    this.lines[this.currentLineIndex].baseLineY = Math.max(
+      this.lines[this.currentLineIndex].baseLineY,
+      baseLineY,
+    );
+
+    // set current line height
+    this.lines[this.currentLineIndex].height = Math.max(
+      this.lines[this.currentLineIndex].height,
+      lineHeight,
+    );
+
+    // set current line topY
+    if (this.currentLineIndex === 0) {
+      this.lines[0].topY = this.initialPosition.y;
+    } else {
+      this.lines[this.currentLineIndex].topY =
+        this.lines[this.currentLineIndex - 1].topY +
+        this.lines[this.currentLineIndex - 1].height;
+    }
+
+    if (splitLength === text.length) {
+      // this means the text can all be rendered in this line.
+      this.currentRenderingBaselineX += width;
+    } else {
+      this.currentLineIndex++;
+      this.isJustBreakLine = true;
+      this.calculateLines(text.substring(splitLength), info, true);
     }
 
     // this.ctx.save();

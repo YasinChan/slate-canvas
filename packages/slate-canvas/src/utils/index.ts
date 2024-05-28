@@ -43,9 +43,8 @@ export function createFontValue(
     fontVariant = fontVariantDefault,
     fontWeight = fontWeightDefault,
     fontSize = fontSizeDefault,
-    lineHeight = lineHeightDefault,
     fontFamily = fontFamilyDefault,
   } = handledCanvasOptions;
 
-  return `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}px/${lineHeight} ${fontFamily}`;
+  return `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}px ${fontFamily}`;
 }
