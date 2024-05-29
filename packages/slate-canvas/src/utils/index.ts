@@ -48,3 +48,20 @@ export function createFontValue(
 
   return `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}px ${fontFamily}`;
 }
+
+export function findClosestIndex<T>(
+  arr: T[],
+  key: keyof T,
+  value: number,
+): number {
+  let index = -1;
+  for (let i = 0; i < arr.length; i++) {
+    // @ts-ignore
+    if (arr[i][key] <= value) {
+      index = i;
+    } else {
+      break;
+    }
+  }
+  return index;
+}

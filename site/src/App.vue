@@ -44,20 +44,25 @@ const initialValue = [
       {
         text: state.text1,
       },
-      { text: '生活就是个缓慢受锤的过程，', bold: true },
+      { text: '生活就是个缓慢受锤的过程，', size: 30 },
+      { text: '人一天天老下去，奢望也一天天消逝，', bold: true },
       {
-        text: '人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
+        text: '最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
       },
     ],
   },
-  // {
-  //   type: 'paragraph',
-  //   children: [
-  //     {
-  //       text: '你好 Hello Привет Bonjour Ciao 안녕하세요 こんにちは',
-  //     },
-  //   ],
-  // },
+  {
+    type: 'paragraph',
+    children: [
+      {
+        text: 'asdf哈哈',
+      },
+      {
+        text: '哈哈asdfasdf',
+        size: 28,
+      },
+    ],
+  },
 ];
 
 const cvs = ref<HTMLElement>();
@@ -76,7 +81,7 @@ onMounted(() => {
     initialValue: initialValue,
   });
   const canvas = sc.getCanvas();
-  canvas.style.backgroundColor = 'rgb(184, 190, 196)';
+  canvas!.style.backgroundColor = 'rgb(184, 190, 196)';
   cvs.value?.appendChild(canvas);
 });
 </script>
@@ -84,14 +89,12 @@ onMounted(() => {
 <template>
   <div v-if="state.show" class="compare">
     {{ state.text1
-    }}<span style="font-weight: bold; font-size: 30px"
-      >生活就是个缓慢受锤的过程，</span
-    >
-    人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
-
+    }}<span style="font-size: 30px">生活就是个缓慢受锤的过程，</span
+    ><span style="font-weight: bold">人一天天老下去，奢望也一天天消逝，</span
+    >最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
     <p>asdf哈哈<span style="font-size: 28px">哈哈asdfasdf</span></p>
   </div>
-  <div ref="cvs"></div>
+  <div style="margin-left: 100px; margin-top: 200px" ref="cvs"></div>
   <button @click="state.show = !state.show">
     {{ state.show ? 'hide' : 'show' }} compare word
   </button>

@@ -28,4 +28,16 @@ export const CanvasEditor: CanvasEditorInterface = {
     console.log('----------', 'blur', 1, '----------cyy log');
     IS_FOCUSED.set(editor, false);
   },
+  // toSlateRange([path]) {
+  //   return {
+  //     anchor: {
+  //       path: [1, 0],
+  //       offset: 4,
+  //     },
+  //     focus: {
+  //       path: [1, 2],
+  //       offset: 38,
+  //     },
+  //   };
+  // },
 };

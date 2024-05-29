@@ -6,6 +6,8 @@ import {
   defaultCanvasOptions,
   setAccuracyCanvasOptions,
   createFontValue,
+  initCreateFontValue,
+  findClosestIndex,
   OptionsType,
   CanvasOptionsType,
 } from '../utils';
@@ -14,6 +16,7 @@ type TextItemType = {
   text: string;
   font?: string;
   x: number;
+  realPath: number[];
 };
 type LinesType = {
   baseLineY: number; // The relative vertical position of the calculated baseline based on `textBaseline: alphabetic` to the top of the canvas.
@@ -27,17 +30,36 @@ export class SlateCanvas {
   public initialValue: Descendant[];
   private canvas: HTMLCanvasElement | undefined = undefined;
   private ctx: CanvasRenderingContext2D | undefined = undefined;
-  private handledCanvasOptions: CanvasOptionsType = defaultCanvasOptions; // Converts the values in `canvasOptions` in `options` by precision.
-  private initialPosition: { x: number; y: number } = { x: 0, y: 0 }; // The position at which to initially start rendering the content
+  // Converts the values in `canvasOptions` in `options` by precision.
+  private handledCanvasOptions: CanvasOptionsType = defaultCanvasOptions;
+  // The position at which to initially start rendering the content
+  private initialPosition: { x: number; y: number } = { x: 0, y: 0 };
+  // Minus padding content size
   private contentSize: { width: number; height: number } = {
     width: 0,
     height: 0,
-  }; // Minus padding content size
+  };
   private currentRenderingBaselineX: number = 0;
   private currentLineMaxBaseLineY: number = 0;
-  private currentLineIndex: number = -1; // index of lines currently being rendered
-  private lines: LinesType[] = []; // Record the rendering information of each line
-  private isJustBreakLine: boolean = true; // this is a flag whether a line break has just been completed
+  // index of lines currently being rendered
+  private currentLineIndex: number = -1;
+
+  // the rendering paragraph
+  private currentParagraph: number = -1;
+  // the rendering section in current paragraph
+  private currentParagraphSection: number = -1;
+  // In Slate, it’s necessary to track the `selection`, which corresponds to the paragraph index in the DOM.
+  // Unlike DOM rendering, where text automatically wraps and maintains its position within a paragraph,
+  // canvas rendering requires manual calculation of how much text fits on each line.
+  // This means we need to keep track of the current content
+  // being rendered on the canvas and map it to the correct paragraph index as it would appear in the DOM.
+  // This ensures that selections and other text manipulations in Slate accurately reflect the text's position within the DOM structure.
+  // These are for `realPath`.
+
+  // Record the rendering information of each line
+  private lines: LinesType[] = [];
+  // this is a flag whether a line break has just been completed
+  private isJustBreakLine: boolean = true;
 
   constructor(
     public editor: BaseEditor,
@@ -51,6 +73,7 @@ export class SlateCanvas {
     this.check();
     this.optionsHandler();
     this.init();
+    this.listen();
   }
 
   /**
@@ -113,12 +136,38 @@ export class SlateCanvas {
     this.render();
   }
 
-  reset() {
-    if (!this.ctx) {
+  listen() {
+    if (!this.canvas || !this.ctx) {
       return;
     }
-    this.ctx.font = createFontValue({});
-    this.ctx!.restore();
+
+    this.canvas.addEventListener('mousedown', (e: MouseEvent) => {
+      console.log('----------', 'e', e, '----------cyy log');
+      const { offsetX, offsetY } = e;
+
+      let line = -1;
+      for (let i = 0; i < this.lines.length; i++) {
+        if (this.lines[i]['topY'] <= setAccuracy(offsetY)) {
+          line = i;
+        } else {
+          break;
+        }
+      }
+
+      const items = this.lines[line].items;
+      const x = setAccuracy(offsetX);
+      let section = {};
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.x <= x) {
+          section = item;
+        } else {
+          break;
+        }
+      }
+      console.log('----------', 'x', x, '----------cyy log');
+      console.log('----------', 'section', section, '----------cyy log');
+    });
   }
 
   render() {
@@ -141,21 +190,28 @@ export class SlateCanvas {
     };
 
     this.initialValue.forEach((item) => {
-      this.reset();
+      this.resetFont();
       this.currentLineIndex++;
+      this.currentParagraph++;
+      this.currentParagraphSection = -1;
       this.isJustBreakLine = true;
       if ('children' in item) {
         item.children.forEach((child) => {
-          this.reset();
-          let font = '';
+          this.resetFont();
+          this.currentParagraphSection++;
+
+          const fontObj: Partial<CanvasOptionsType> = {};
           if ('bold' in child) {
-            this.ctx!.save();
-            font = createFontValue({
-              fontWeight: 'bold',
-              fontSize: 60,
-            });
-            // this.ctx!.font = font;
+            fontObj['fontWeight'] = 'bold';
           }
+          if ('size' in child) {
+            fontObj['fontSize'] = setAccuracy(child.size as number);
+          }
+          let font = '';
+          if (Object.keys(fontObj)?.length) {
+            font = createFontValue(fontObj);
+          }
+
           if ('text' in child) {
             const info: { font?: string } = {};
             font && (info['font'] = font);
@@ -166,13 +222,11 @@ export class SlateCanvas {
     });
 
     console.log('----------', 'this.lines', this.lines, '----------cyy log');
-    this.ctx!.restore();
+
     this.lines.forEach((line) => {
       line.items.forEach((lineItem: any) => {
-        this.ctx!.restore();
-        // this.ctx!.font = '';
+        this.resetFont();
         if (lineItem.font) {
-          this.ctx!.save();
           this.ctx!.font = lineItem.font;
         }
         this.ctx!.fillText(lineItem.text, lineItem.x, line.baseLineY);
@@ -202,7 +256,7 @@ export class SlateCanvas {
       actualBoundingBoxAscent,
       actualBoundingBoxDescent,
     }: TextMetrics = this.ctx.measureText(text);
-
+    debugger;
     const { width: contentWidth, height: contentHeight } = this.contentSize;
 
     // real text height, see https://developer.mozilla.org/en-US/docs/Web/API/TextMetrics
@@ -221,34 +275,37 @@ export class SlateCanvas {
     const textY: number =
       (lineHeight - textHeight) / 2 + actualBoundingBoxAscent;
 
-    this.currentLineMaxBaseLineY = Math.max(
-      this.currentLineMaxBaseLineY,
-      textY,
-    );
-
-    let baseLineY: number; // record the baseLineY of the current line
-    if (this.currentLineIndex === 0) {
-      baseLineY = this.initialPosition.y + this.currentLineMaxBaseLineY;
-    } else {
-      const lastLine = this.lines[this.currentLineIndex - 1];
-      baseLineY =
-        lastLine.topY + lastLine.height + this.currentLineMaxBaseLineY;
-    }
-
     let splitLength: number;
     if (this.isJustBreakLine) {
       // New line, so rendering from the beginning of the line.
       this.isJustBreakLine = false;
+
+      this.currentLineMaxBaseLineY = textY;
 
       this.currentRenderingBaselineX = this.initialPosition.x;
 
       splitLength = this.getSplitLength(contentWidth, width, text);
     } else {
       // Keep rendering on this line.
+      this.currentLineMaxBaseLineY = Math.max(
+        this.currentLineMaxBaseLineY,
+        textY,
+      );
+
       const leftWidth =
         contentWidth -
         (this.currentRenderingBaselineX - this.initialPosition.x);
       splitLength = this.getSplitLength(leftWidth, width, text);
+    }
+
+    // record the baseLineY of the current line
+    let baseLineY: number;
+    if (this.currentLineIndex === 0) {
+      baseLineY = this.initialPosition.y + this.currentLineMaxBaseLineY;
+    } else {
+      const lastLine = this.lines[this.currentLineIndex - 1];
+      baseLineY =
+        lastLine.topY + lastLine.height + this.currentLineMaxBaseLineY;
     }
 
     this.lines[this.currentLineIndex] = this.lines[this.currentLineIndex] || {
@@ -263,6 +320,7 @@ export class SlateCanvas {
         {
           text: text.substring(0, splitLength),
           x: this.currentRenderingBaselineX,
+          realPath: [this.currentParagraph, this.currentParagraphSection],
         },
         info,
       ),
@@ -360,6 +418,13 @@ export class SlateCanvas {
       splitLength = i;
     }
     return splitLength;
+  }
+
+  resetFont() {
+    if (!this.ctx) {
+      return;
+    }
+    this.ctx.font = initCreateFontValue(this.handledCanvasOptions);
   }
 
   fillText(text: string) {
