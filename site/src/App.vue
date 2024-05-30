@@ -61,6 +61,9 @@ const initialValue = [
         text: '哈哈asdfasdf',
         size: 28,
       },
+      {
+        text: '我觉得自己会永远生猛下去我觉得自己会永远生猛下去我觉得自己会永远生猛下去',
+      },
     ],
   },
 ];
@@ -75,7 +78,7 @@ onMounted(() => {
       width: 500,
       height: 500,
       accuracy: 1,
-      lineHeight: 1.5,
+      lineHeight: 2.5,
       padding: 20,
     },
     initialValue: initialValue,
@@ -92,9 +95,12 @@ onMounted(() => {
     }}<span style="font-size: 30px">生活就是个缓慢受锤的过程，</span
     ><span style="font-weight: bold">人一天天老下去，奢望也一天天消逝，</span
     >最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
-    <p>asdf哈哈<span style="font-size: 28px">哈哈asdfasdf</span></p>
+    <p>
+      asdf哈哈<span style="font-size: 28px">哈哈asdfasdf</span
+      >我觉得自己会永远生猛下去我觉得自己会永远生猛下去我觉得自己会永远生猛下去
+    </p>
   </div>
-  <div style="margin-left: 100px; margin-top: 200px" ref="cvs"></div>
+  <div ref="cvs"></div>
   <button @click="state.show = !state.show">
     {{ state.show ? 'hide' : 'show' }} compare word
   </button>
@@ -108,7 +114,7 @@ onMounted(() => {
   top: 0;
   left: 0;
   padding: 20px;
-  line-height: 1.5;
+  line-height: 2.5;
   width: 500px;
   height: 500px;
   background-color: rgb(144, 150, 156);

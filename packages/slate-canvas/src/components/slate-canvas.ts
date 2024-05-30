@@ -200,12 +200,14 @@ export class SlateCanvas {
           this.resetFont();
           this.currentParagraphSection++;
 
+          let fontSize = this.handledCanvasOptions.fontSize;
           const fontObj: Partial<CanvasOptionsType> = {};
           if ('bold' in child) {
             fontObj['fontWeight'] = 'bold';
           }
           if ('size' in child) {
-            fontObj['fontSize'] = setAccuracy(child.size as number);
+            fontSize = setAccuracy(child.size as number);
+            fontObj['fontSize'] = fontSize;
           }
           let font = '';
           if (Object.keys(fontObj)?.length) {
@@ -213,7 +215,9 @@ export class SlateCanvas {
           }
 
           if ('text' in child) {
-            const info: { font?: string } = {};
+            const info: { font?: string; fontSize: number } = {
+              fontSize: fontSize,
+            };
             font && (info['font'] = font);
             this.calculateLines(child.text, info);
           }
@@ -243,7 +247,7 @@ export class SlateCanvas {
 
   calculateLines(
     text: string,
-    info: { font?: string } = {},
+    info: { font?: string; fontSize: number },
     recursive: boolean = false,
   ) {
     if (!this.ctx) {
@@ -256,7 +260,7 @@ export class SlateCanvas {
       actualBoundingBoxAscent,
       actualBoundingBoxDescent,
     }: TextMetrics = this.ctx.measureText(text);
-    debugger;
+
     const { width: contentWidth, height: contentHeight } = this.contentSize;
 
     // real text height, see https://developer.mozilla.org/en-US/docs/Web/API/TextMetrics
@@ -264,7 +268,7 @@ export class SlateCanvas {
     let lineHeight = this.handledCanvasOptions.lineHeight;
     if (typeof lineHeight === 'number') {
       // like 1.5
-      lineHeight = lineHeight * textHeight;
+      lineHeight = lineHeight * info.fontSize;
     }
     if (typeof lineHeight === 'string') {
       // like '20px'
