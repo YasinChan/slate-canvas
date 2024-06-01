@@ -31,7 +31,7 @@ export type CanvasOptionsType = setAccuracyCanvasOptions & {
 };
 
 export interface OptionsType {
-  canvasOptions?: Partial<CanvasOptionsType>;
+  canvasOptions: Partial<CanvasOptionsType>;
   initialValue: Descendant[];
 }
 

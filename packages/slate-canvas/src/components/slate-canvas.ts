@@ -145,6 +145,7 @@ export class SlateCanvas {
       console.log('----------', 'e', e, '----------cyy log');
       const { offsetX, offsetY } = e;
 
+      // find line
       let line = -1;
       for (let i = 0; i < this.lines.length; i++) {
         if (this.lines[i]['topY'] <= setAccuracy(offsetY)) {

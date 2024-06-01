@@ -16,7 +16,7 @@ export interface CanvasEditorInterface {
 }
 
 export const CanvasEditor: CanvasEditorInterface = {
-  focus(editor) {
+  focus(editor: CanvasEditor) {
     // Return if already focused
     if (IS_FOCUSED.get(editor)) {
       return;
@@ -24,7 +24,7 @@ export const CanvasEditor: CanvasEditorInterface = {
     console.log('----------', 'focus', 1, '----------cyy log');
     IS_FOCUSED.set(editor, true);
   },
-  blur(editor) {
+  blur(editor: CanvasEditor) {
     console.log('----------', 'blur', 1, '----------cyy log');
     IS_FOCUSED.set(editor, false);
   },

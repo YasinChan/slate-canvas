@@ -12,7 +12,12 @@ export const createCanvas = (
 ): CreateCanvasReturnType => {
   const { width, height, styleWidth, styleHeight } = handledCanvasOptions;
 
+  const canvasWrapper = document.createElement('div');
+  canvasWrapper.style.width = styleWidth + 'px';
+  canvasWrapper.style.height = styleHeight + 'px';
+
   const canvas: HTMLCanvasElement = document.createElement('canvas');
+  canvasWrapper.appendChild(canvas);
   canvas.width = width;
   canvas.height = height;
   canvas.style.width = styleWidth + 'px';
