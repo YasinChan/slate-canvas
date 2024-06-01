@@ -7,6 +7,7 @@ import {
   setAccuracyCanvasOptions,
   createFontValue,
   initCreateFontValue,
+  dpr,
   findClosestIndex,
   OptionsType,
   CanvasOptionsType,
@@ -15,6 +16,7 @@ import {
 type TextItemType = {
   text: string;
   font?: string;
+  fontSize?: number;
   x: number;
   realPath: number[];
 };
@@ -28,6 +30,8 @@ type LinesType = {
 export class SlateCanvas {
   public canvasOptions: Partial<CanvasOptionsType> = {};
   public initialValue: Descendant[];
+  private canvasWrapper: HTMLDivElement | undefined = undefined;
+  private textarea: HTMLTextAreaElement | undefined = undefined;
   private canvas: HTMLCanvasElement | undefined = undefined;
   private ctx: CanvasRenderingContext2D | undefined = undefined;
   // Converts the values in `canvasOptions` in `options` by precision.
@@ -126,10 +130,12 @@ export class SlateCanvas {
   }
 
   init() {
-    const { canvas, ctx } = createCanvas(
+    const { canvasWrapper, textarea, canvas, ctx } = createCanvas(
       this.editor,
       this.handledCanvasOptions,
     );
+    this.canvasWrapper = canvasWrapper;
+    this.textarea = textarea;
     this.canvas = canvas;
     this.ctx = ctx;
 
@@ -142,7 +148,6 @@ export class SlateCanvas {
     }
 
     this.canvas.addEventListener('mousedown', (e: MouseEvent) => {
-      console.log('----------', 'e', e, '----------cyy log');
       const { offsetX, offsetY } = e;
 
       // find line
@@ -157,7 +162,7 @@ export class SlateCanvas {
 
       const items = this.lines[line].items;
       const x = setAccuracy(offsetX);
-      let section = {};
+      let section: TextItemType = items[0];
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (item.x <= x) {
@@ -166,9 +171,139 @@ export class SlateCanvas {
           break;
         }
       }
-      console.log('----------', 'x', x, '----------cyy log');
-      console.log('----------', 'section', section, '----------cyy log');
+
+      // x position of the current click in the section
+      const currentSectionClickX = x - section.x;
+      const { offset, left, ascentDescentRatio } = this.findOffset(
+        section,
+        currentSectionClickX,
+      );
+
+      const selection = {
+        anchor: {
+          path: section.realPath,
+          offset: offset,
+        },
+        focus: {
+          path: section.realPath,
+          offset: offset,
+        },
+      };
+
+      if (this.textarea) {
+        const { baseLineY } = this.lines[line];
+
+        let fontHeight = section.fontSize
+          ? section.fontSize
+          : this.handledCanvasOptions.fontSize;
+
+        const descent = fontHeight / (ascentDescentRatio + 1);
+
+        // fontHeight = fontHeight * 1.1;
+        const fontTopToTop = baseLineY - fontHeight;
+
+        this.textarea.style.left = `${left / dpr}px`;
+        this.textarea.style.fontSize = `${fontHeight / dpr}px`;
+        this.textarea.style.top = `${(fontTopToTop + descent) / dpr}px`;
+        this.textarea.style.height = `${fontHeight / dpr}px`;
+        this.textarea.style.lineHeight = `${fontHeight / dpr}px`;
+        setTimeout(() => {
+          this.textarea?.focus();
+        });
+      }
     });
+  }
+
+  /**
+   * find selection offset
+   * @param section
+   * @param currentSectionClickX current section click x
+   */
+  findOffset(
+    section: TextItemType,
+    currentSectionClickX: number,
+  ): {
+    offset: number;
+    left: number;
+    fontHeight: number;
+    ascentDescentRatio: number;
+  } {
+    let fontHeight = this.handledCanvasOptions.fontSize;
+
+    if (!this.ctx) {
+      return {
+        offset: 0,
+        left: 0,
+        fontHeight,
+        ascentDescentRatio: 1,
+      };
+    }
+
+    this.resetFont();
+    const { text, font, x } = section;
+    font && (this.ctx.font = font);
+
+    let index = 1;
+    let left = x;
+    let ascentDescentRatio = 1;
+
+    while (index <= text.length) {
+      const currentText = text.slice(index - 1, index);
+      const {
+        width: currentTextWidth,
+        actualBoundingBoxDescent: currentTextActualBoundingBoxDescent,
+        actualBoundingBoxAscent: currentTextActualBoundingBoxAscent,
+      }: TextMetrics = this.ctx.measureText(currentText);
+      if (index === 1) {
+        if (currentSectionClickX < currentTextWidth / 2) {
+          break;
+        } else if (
+          currentSectionClickX >= currentTextWidth / 2 &&
+          currentSectionClickX < currentTextWidth
+        ) {
+          left = x + currentTextWidth;
+          ascentDescentRatio =
+            currentTextActualBoundingBoxAscent /
+            currentTextActualBoundingBoxDescent;
+          fontHeight =
+            currentTextActualBoundingBoxDescent +
+            currentTextActualBoundingBoxAscent;
+          index++;
+          break;
+        }
+      }
+
+      const t = text.slice(0, index);
+      const {
+        width: textWidth,
+        actualBoundingBoxDescent: textActualBoundingBoxDescent,
+        actualBoundingBoxAscent: textActualBoundingBoxAscent,
+      }: TextMetrics = this.ctx.measureText(t);
+      if (currentSectionClickX < textWidth - currentTextWidth / 2) {
+        break;
+      } else if (
+        currentSectionClickX >= textWidth - currentTextWidth / 2 &&
+        currentSectionClickX < textWidth
+      ) {
+        left = x + textWidth;
+        ascentDescentRatio =
+          textActualBoundingBoxAscent / textActualBoundingBoxDescent;
+        fontHeight = textActualBoundingBoxDescent + textActualBoundingBoxAscent;
+        index++;
+        break;
+      }
+      ascentDescentRatio =
+        textActualBoundingBoxAscent / textActualBoundingBoxDescent;
+      fontHeight = textActualBoundingBoxDescent + textActualBoundingBoxAscent;
+      left = x + textWidth;
+      index++;
+    }
+    return {
+      offset: index - 1,
+      left,
+      fontHeight,
+      ascentDescentRatio,
+    };
   }
 
   render() {
@@ -436,6 +571,10 @@ export class SlateCanvas {
     if (!this.ctx) {
       return;
     }
+  }
+
+  getCanvasWrapper() {
+    return this.canvasWrapper;
   }
 
   getCanvas() {

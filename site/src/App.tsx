@@ -36,6 +36,7 @@ export default defineComponent({
           },
           {
             text: '哈哈asdfasdf',
+            size: 28,
           },
           {
             text: '我觉得自己会永远生猛下去我觉得自己会永远生猛下去我觉得自己会永远生猛下去',
@@ -57,9 +58,10 @@ export default defineComponent({
         },
         initialValue: initialValue,
       });
+      const canvasWrapper = sc.getCanvasWrapper() as HTMLDivElement;
       const canvas = sc.getCanvas() as HTMLCanvasElement;
       canvas!.style.backgroundColor = 'rgb(184, 190, 196)';
-      cvs.value?.appendChild(canvas);
+      cvs.value?.appendChild(canvasWrapper);
     });
 
     return {

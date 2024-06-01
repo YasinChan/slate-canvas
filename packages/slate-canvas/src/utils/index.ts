@@ -2,6 +2,8 @@ import { CanvasOptionsType, defaultCanvasOptions } from './options';
 export * from './options';
 
 let accuracy: number = 1;
+
+export let dpr: number = 2;
 /**
  * set canvas accuracy
  * @param num
@@ -10,7 +12,7 @@ let accuracy: number = 1;
 export function setAccuracy(num: number, acy?: number): number {
   accuracy = acy || accuracy;
   const devicePixelRatio = window.devicePixelRatio || 2;
-  const dpr = devicePixelRatio * accuracy;
+  dpr = devicePixelRatio * accuracy;
 
   return num * dpr;
 }

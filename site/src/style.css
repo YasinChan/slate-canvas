@@ -19,6 +19,7 @@
 .compare {
   word-break: break-all;
   position: fixed;
+  z-index: 1;
   text-decoration: underline;
   top: 0;
   left: 0;
