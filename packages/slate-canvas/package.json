@@ -1,6 +1,6 @@
 {
   "name": "slate-canvas",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "> TODO: description",
   "author": "YasinChan <yasinchan2016@gmail.com>",
   "homepage": "https://github.com/YasinChan/slate-canvas#readme",
@@ -44,5 +44,5 @@
     "rollup": "^4.18.0",
     "rollup-plugin-typescript2": "^0.36.0"
   },
-  "gitHead": "4eab0865114cd8acc4ccb12dd4165cb35b7725ba"
+  "gitHead": "13a43d93e54a9f72aebb684ffdc4fa9bd17e787e"
 }
