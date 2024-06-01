@@ -15,3 +15,17 @@
   margin: 0;
   padding: 0;
 }
+
+.compare {
+  word-break: break-all;
+  position: fixed;
+  text-decoration: underline;
+  top: 0;
+  left: 0;
+  padding: 20px;
+  line-height: 2.5;
+  width: 500px;
+  height: 500px;
+  background-color: rgb(144, 150, 156);
+  opacity: 0.8;
+}

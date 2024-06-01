@@ -37,6 +37,7 @@ const state = reactive({
 
 // 你好 Hello Привет Bonjour Ciao สวัสดี مرحبًا 안녕하세요 こんにちは.
 // Thai and Arabic are not supported at this time.
+// TODO when using webstorm, as you can see there is a ts error here, instead in vscode, not.
 const initialValue: Descendant[] = [
   {
     type: 'paragraph',

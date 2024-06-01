@@ -1,27 +1,13 @@
-import { BaseText, Descendant } from 'slate';
-
-interface CustomElement {
-  type: string;
-  url?: string;
-  id?: string | number;
-  children: Descendant[];
-}
-
-interface CustomText {
-  bold?: boolean;
-  italic?: boolean;
-  code?: boolean;
-  size?: number;
-  text: string;
-}
+import { BaseText } from 'slate';
+import { SlateCanvasTextType, SlateCanvasElementType } from 'slate-canvas';
 
 declare module 'slate' {
   interface CustomTypes {
-    Element: CustomElement;
-    Text: BaseText | CustomText;
+    Element: SlateCanvasElementType;
+    Text: BaseText | SlateCanvasTextType;
   }
 }
 
 declare global {}
 
-export {}
+export {};
