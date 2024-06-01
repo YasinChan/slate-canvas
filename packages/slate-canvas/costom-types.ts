@@ -1,5 +1,11 @@
-import { BaseRange, BaseText } from 'slate';
-import { CanvasEditor } from './plugin/canvas-editor';
+import { Descendant, BaseText } from 'slate';
+import { CanvasEditor } from './src/plugin/canvas-editor';
+
+type CustomElement = {
+  type: string;
+  id?: string | number;
+  children: Descendant[];
+};
 
 type CustomText = {
   bold?: boolean;
@@ -12,6 +18,7 @@ type CustomText = {
 declare module 'slate' {
   interface CustomTypes {
     Editor: CanvasEditor;
+    Element: CustomElement;
     Text: CustomText | BaseText;
   }
 }

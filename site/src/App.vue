@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue';
 import { SlateCanvas, withCanvas } from 'slate-canvas';
-import { createEditor } from 'slate';
+import { createEditor, Descendant } from 'slate';
 
 const state = reactive({
   text1:
@@ -37,7 +37,7 @@ const state = reactive({
 
 // 你好 Hello Привет Bonjour Ciao สวัสดี مرحبًا 안녕하세요 こんにちは.
 // Thai and Arabic are not supported at this time.
-const initialValue = [
+const initialValue: Descendant[] = [
   {
     type: 'paragraph',
     children: [
@@ -59,7 +59,6 @@ const initialValue = [
       },
       {
         text: '哈哈asdfasdf',
-        size: 28,
       },
       {
         text: '我觉得自己会永远生猛下去我觉得自己会永远生猛下去我觉得自己会永远生猛下去',
