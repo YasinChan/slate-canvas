@@ -26,6 +26,12 @@ type LinesType = {
   height: number; // The height of this line
   items: TextItemType[];
 };
+type fontOffsetType = {
+  offset: number;
+  left: number;
+  fontHeight: number;
+  ascentDescentRatio: number;
+};
 
 export class SlateCanvas {
   public canvasOptions: Partial<CanvasOptionsType> = {};
@@ -163,7 +169,8 @@ export class SlateCanvas {
       const items = this.lines[line].items;
       const x = setAccuracy(offsetX);
       let section: TextItemType = items[0];
-      for (let i = 0; i < items.length; i++) {
+      let i;
+      for (i = 0; i < items.length; i++) {
         const item = items[i];
         if (item.x <= x) {
           section = item;
@@ -173,11 +180,21 @@ export class SlateCanvas {
       }
 
       // x position of the current click in the section
-      const currentSectionClickX = x - section.x;
-      const { offset, left, ascentDescentRatio } = this.findOffset(
-        section,
-        currentSectionClickX,
-      );
+      let currentSectionClickX = x - section.x;
+
+      const currentFontSize =
+        section.fontSize || this.handledCanvasOptions.fontSize;
+      let offsetInfo: fontOffsetType;
+      if (i > 1 && currentSectionClickX < currentFontSize / 2) {
+        // As we can see, the height of the cursor is related to the fontsize of the current position.
+        // If two adjacent sections do not have the same fontsize,
+        // then the position between them should correspond to the previous fontsize.
+        section = items[i - 2];
+        offsetInfo = this.findOffset(section, section.x, true);
+      } else {
+        offsetInfo = this.findOffset(section, currentSectionClickX);
+      }
+      const { offset, left, ascentDescentRatio } = offsetInfo;
 
       const selection = {
         anchor: {
@@ -189,6 +206,7 @@ export class SlateCanvas {
           offset: offset,
         },
       };
+      console.log('----------', 'selection', selection, '----------cyy log');
 
       if (this.textarea) {
         const { baseLineY } = this.lines[line];
@@ -218,16 +236,13 @@ export class SlateCanvas {
    * find selection offset
    * @param section
    * @param currentSectionClickX current section click x
+   * @param isLast If you know that the current is the last element in the section, you can calculate the last without the previous steps.
    */
   findOffset(
     section: TextItemType,
     currentSectionClickX: number,
-  ): {
-    offset: number;
-    left: number;
-    fontHeight: number;
-    ascentDescentRatio: number;
-  } {
+    isLast: boolean = false,
+  ): fontOffsetType {
     let fontHeight = this.handledCanvasOptions.fontSize;
 
     if (!this.ctx) {
@@ -247,6 +262,20 @@ export class SlateCanvas {
     let left = x;
     let ascentDescentRatio = 1;
 
+    if (isLast) {
+      const {
+        width,
+        actualBoundingBoxDescent,
+        actualBoundingBoxAscent,
+      }: TextMetrics = this.ctx.measureText(text);
+      return {
+        offset: text.length,
+        left: width + x,
+        fontHeight: actualBoundingBoxDescent + actualBoundingBoxAscent,
+        ascentDescentRatio: actualBoundingBoxAscent / actualBoundingBoxDescent,
+      };
+    }
+
     while (index <= text.length) {
       const currentText = text.slice(index - 1, index);
       const {
@@ -255,6 +284,12 @@ export class SlateCanvas {
         actualBoundingBoxAscent: currentTextActualBoundingBoxAscent,
       }: TextMetrics = this.ctx.measureText(currentText);
       if (index === 1) {
+        ascentDescentRatio =
+          currentTextActualBoundingBoxAscent /
+          currentTextActualBoundingBoxDescent;
+        fontHeight =
+          currentTextActualBoundingBoxDescent +
+          currentTextActualBoundingBoxAscent;
         if (currentSectionClickX < currentTextWidth / 2) {
           break;
         } else if (
@@ -262,12 +297,6 @@ export class SlateCanvas {
           currentSectionClickX < currentTextWidth
         ) {
           left = x + currentTextWidth;
-          ascentDescentRatio =
-            currentTextActualBoundingBoxAscent /
-            currentTextActualBoundingBoxDescent;
-          fontHeight =
-            currentTextActualBoundingBoxDescent +
-            currentTextActualBoundingBoxAscent;
           index++;
           break;
         }
