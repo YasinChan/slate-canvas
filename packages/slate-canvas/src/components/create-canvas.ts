@@ -1,4 +1,4 @@
-import { BaseEditor } from 'slate';
+import { CanvasEditor } from '../plugin/canvas-editor';
 import { initCreateFontValue, dpr, CanvasOptionsType } from '../utils';
 
 export type CreateCanvasReturnType = {
@@ -9,7 +9,7 @@ export type CreateCanvasReturnType = {
 };
 
 export function createCanvas(
-  editor: BaseEditor,
+  editor: CanvasEditor,
   handledCanvasOptions: CanvasOptionsType,
 ): CreateCanvasReturnType {
   const { width, height, styleWidth, styleHeight, fontSize } =
@@ -26,6 +26,7 @@ export function createCanvas(
   canvas.height = height;
   canvas.style.width = styleWidth + 'px';
   canvas.style.height = styleHeight + 'px';
+  canvas.style.cursor = 'text';
 
   const textarea: HTMLTextAreaElement = document.createElement('textarea');
   textarea.style.position = 'absolute';
@@ -51,4 +52,14 @@ export function createCanvas(
   ctx.save();
 
   return { canvasWrapper, textarea, canvas, ctx };
+}
+
+export function createCxtForCalculate(
+  editor: CanvasEditor,
+): CanvasRenderingContext2D {
+  const canvas: HTMLCanvasElement = document.createElement('canvas');
+  canvas.width = 100;
+  canvas.height = 100;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  return ctx;
 }

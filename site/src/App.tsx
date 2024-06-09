@@ -48,6 +48,9 @@ export default defineComponent({
     onMounted(() => {
       const editor = withCanvas(createEditor());
 
+      // @ts-ignore
+      window.editor = editor;
+
       const sc = new SlateCanvas(editor, {
         canvasOptions: {
           width: 500,

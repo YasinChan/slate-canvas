@@ -30,3 +30,7 @@
   background-color: rgb(144, 150, 156);
   opacity: 0.8;
 }
+
+canvas {
+  /*margin: 100px;*/
+}

@@ -1,4 +1,12 @@
-import { Editor, Node, Scrubber, BaseEditor, Descendant } from 'slate';
+import {
+  Editor,
+  Node,
+  Path,
+  Scrubber,
+  Transforms,
+  BaseEditor,
+  Descendant,
+} from 'slate';
 import { createCanvas } from '../components/create-canvas';
 
 import {
@@ -8,30 +16,22 @@ import {
   createFontValue,
   initCreateFontValue,
   dpr,
+  throttle,
   findClosestIndex,
   OptionsType,
   CanvasOptionsType,
 } from '../utils';
 
-type TextItemType = {
-  text: string;
-  font?: string;
-  fontSize?: number;
-  x: number;
-  realPath: number[];
-};
-type LinesType = {
-  baseLineY: number; // The relative vertical position of the calculated baseline based on `textBaseline: alphabetic` to the top of the canvas.
-  topY: number; // The relative vertical position of this line top to the top of the canvas.
-  height: number; // The height of this line
-  items: TextItemType[];
-};
-type fontOffsetType = {
-  offset: number;
-  left: number;
-  fontHeight: number;
-  ascentDescentRatio: number;
-};
+import { IS_FOCUSED } from '../utils/weak-maps';
+
+import { KEY_CODE_ENUM } from '../config/key';
+
+import {
+  TextItemType,
+  LinesType,
+  FontOffsetType,
+  PositionInfoType,
+} from '../types';
 
 export class SlateCanvas {
   public canvasOptions: Partial<CanvasOptionsType> = {};
@@ -71,6 +71,15 @@ export class SlateCanvas {
   // this is a flag whether a line break has just been completed
   private isJustBreakLine: boolean = true;
 
+  private isMouseDown: boolean = false;
+  private cursorPosition: PositionInfoType | undefined = undefined;
+  private selectionRange:
+    | {
+        start: PositionInfoType;
+        end: PositionInfoType;
+      }
+    | undefined = undefined;
+
   constructor(
     public editor: BaseEditor,
     public options: OptionsType,
@@ -102,6 +111,7 @@ export class SlateCanvas {
         `[Slate] editor is invalid! You passed: ${Scrubber.stringify(this.editor)}`,
       );
     }
+    this.editor.children = this.initialValue;
   }
 
   /**
@@ -146,90 +156,171 @@ export class SlateCanvas {
     this.ctx = ctx;
 
     this.render();
+
+    this.onChange();
   }
 
   listen() {
-    if (!this.canvas || !this.ctx) {
+    if (!this.canvas || !this.ctx || !this.textarea) {
       return;
     }
 
+    document.body.addEventListener('keydown', (e: KeyboardEvent) => {
+      const isFocus = IS_FOCUSED.get(this.editor);
+      if (!isFocus) {
+        return;
+      }
+      if (e.code === KEY_CODE_ENUM['ARROW_LEFT']) {
+        Transforms.move(this.editor, { distance: 1, reverse: true });
+      }
+      if (e.code === KEY_CODE_ENUM['ARROW_RIGHT']) {
+        Transforms.move(this.editor, { distance: 1, reverse: false });
+      }
+    });
+
+    this.textarea.addEventListener('blur', () => {
+      IS_FOCUSED.delete(this.editor);
+    });
+
     this.canvas.addEventListener('mousedown', (e: MouseEvent) => {
-      const { offsetX, offsetY } = e;
+      this.isMouseDown = true;
+      const { section, line, offsetInfo } = this.onMouseEvent(e);
 
-      // find line
-      let line = -1;
-      for (let i = 0; i < this.lines.length; i++) {
-        if (this.lines[i]['topY'] <= setAccuracy(offsetY)) {
-          line = i;
-        } else {
-          break;
-        }
-      }
-
-      const items = this.lines[line].items;
-      const x = setAccuracy(offsetX);
-      let section: TextItemType = items[0];
-      let i;
-      for (i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.x <= x) {
-          section = item;
-        } else {
-          break;
-        }
-      }
-
-      // x position of the current click in the section
-      let currentSectionClickX = x - section.x;
-
-      const currentFontSize =
-        section.fontSize || this.handledCanvasOptions.fontSize;
-      let offsetInfo: fontOffsetType;
-      if (i > 1 && currentSectionClickX < currentFontSize / 2) {
-        // As we can see, the height of the cursor is related to the fontsize of the current position.
-        // If two adjacent sections do not have the same fontsize,
-        // then the position between them should correspond to the previous fontsize.
-        section = items[i - 2];
-        offsetInfo = this.findOffset(section, section.x, true);
-      } else {
-        offsetInfo = this.findOffset(section, currentSectionClickX);
-      }
       const { offset, left, ascentDescentRatio } = offsetInfo;
 
       const selection = {
         anchor: {
           path: section.realPath,
-          offset: offset,
+          offset: section.index + offset,
         },
         focus: {
           path: section.realPath,
-          offset: offset,
+          offset: section.index + offset,
         },
       };
-      console.log('----------', 'selection', selection, '----------cyy log');
 
-      if (this.textarea) {
-        const { baseLineY } = this.lines[line];
+      Transforms.select(this.editor, selection);
 
-        let fontHeight = section.fontSize
-          ? section.fontSize
-          : this.handledCanvasOptions.fontSize;
+      this.cursorPosition = {
+        line,
+        section,
+        left,
+        ascentDescentRatio,
+      };
+      this.selectionRange = {
+        start: {
+          line,
+          section,
+          left,
+          ascentDescentRatio,
+        },
+        end: {
+          line,
+          section,
+          left,
+          ascentDescentRatio,
+        },
+      };
+    });
 
-        const descent = fontHeight / (ascentDescentRatio + 1);
+    document.body.addEventListener(
+      'mousemove',
+      throttle((e: MouseEvent) => {
+        if (!this.isMouseDown) {
+          return;
+        }
 
-        // fontHeight = fontHeight * 1.1;
-        const fontTopToTop = baseLineY - fontHeight;
+        if (e.target !== this.canvas) {
+          return;
+        }
 
-        this.textarea.style.left = `${left / dpr}px`;
-        this.textarea.style.fontSize = `${fontHeight / dpr}px`;
-        this.textarea.style.top = `${(fontTopToTop + descent) / dpr}px`;
-        this.textarea.style.height = `${fontHeight / dpr}px`;
-        this.textarea.style.lineHeight = `${fontHeight / dpr}px`;
-        setTimeout(() => {
-          this.textarea?.focus();
-        });
+        const { section, line, offsetInfo } = this.onMouseEvent(e);
+      }, 100),
+    );
+
+    document.body.addEventListener('mouseup', (e: MouseEvent) => {
+      this.isMouseDown = false;
+      if (e.target !== this.canvas) {
+        return;
       }
     });
+  }
+
+  onMouseEvent(e: MouseEvent) {
+    const { offsetX, offsetY } = e;
+
+    // find line
+    let line = this.findLineByY(offsetY);
+
+    const items = this.lines[line].items;
+    const x = setAccuracy(offsetX);
+    let section: TextItemType = items[0];
+    let i;
+    for (i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.x <= x) {
+        section = item;
+      } else {
+        break;
+      }
+    }
+
+    // x position of the current click in the section
+    let currentSectionClickX = x - section.x;
+
+    const currentFontSize =
+      section.fontSize || this.handledCanvasOptions.fontSize;
+    let offsetInfo: FontOffsetType;
+    if (i > 1 && currentSectionClickX < currentFontSize / 2) {
+      // As we can see, the height of the cursor is related to the fontsize of the current position.
+      // If two adjacent sections do not have the same fontsize,
+      // then the position between them should correspond to the previous fontsize.
+      section = items[i - 2];
+      offsetInfo = this.findOffset(section, section.x, true);
+    } else {
+      offsetInfo = this.findOffset(section, currentSectionClickX);
+    }
+
+    return { section, line, offsetInfo };
+
+    // if (this.textarea) {
+    //   const { baseLineY } = this.lines[line];
+    //
+    //   let fontHeight = section.fontSize
+    //     ? section.fontSize
+    //     : this.handledCanvasOptions.fontSize;
+    //
+    //   const descent = fontHeight / (ascentDescentRatio + 1);
+    //
+    //   // fontHeight = fontHeight * 1.1;
+    //   const fontTopToTop = baseLineY - fontHeight;
+    //
+    //   this.textarea.style.left = `${left / dpr}px`;
+    //   this.textarea.style.fontSize = `${fontHeight / dpr}px`;
+    //   this.textarea.style.top = `${(fontTopToTop + descent) / dpr}px`;
+    //   this.textarea.style.height = `${fontHeight / dpr}px`;
+    //   this.textarea.style.lineHeight = `${fontHeight / dpr}px`;
+    //   setTimeout(() => {
+    //     this.textarea?.focus();
+    //   });
+    // }
+  }
+
+  /**
+   * find line by offsetY
+   * @param offsetY
+   */
+  findLineByY(offsetY: number) {
+    // find line
+    let line = -1;
+    for (let i = 0; i < this.lines.length; i++) {
+      if (this.lines[i]['topY'] <= setAccuracy(offsetY)) {
+        line = i;
+      } else {
+        break;
+      }
+    }
+    return line;
   }
 
   /**
@@ -242,7 +333,7 @@ export class SlateCanvas {
     section: TextItemType,
     currentSectionClickX: number,
     isLast: boolean = false,
-  ): fontOffsetType {
+  ): FontOffsetType {
     let fontHeight = this.handledCanvasOptions.fontSize;
 
     if (!this.ctx) {
@@ -410,9 +501,105 @@ export class SlateCanvas {
     }
   }
 
+  onChange() {
+    this.editor.onChange = (o) => {
+      if (!o) {
+        return;
+      }
+      const { operation } = o;
+      if (!operation) {
+        return;
+      }
+
+      switch (operation.type) {
+        case 'set_selection':
+          this.setSelectionOption(operation);
+          break;
+      }
+    };
+  }
+
+  setSelectionOption(operation: any) {
+    if (!operation.newProperties) {
+      return;
+    }
+    const { focus } = operation.newProperties;
+    if (!focus) {
+      return;
+    }
+    const [level1, level2] = focus.path;
+
+    const cursorOffset = focus?.offset;
+
+    let currentItem;
+    let i;
+    let isBreak = false;
+    for (i = 0; i < this.lines.length; i++) {
+      const info = this.lines[i];
+      if (isBreak) {
+        break;
+      }
+      if (info.realPath[0] === level1) {
+        const { items } = info;
+        for (let j = 0; j < items.length; j++) {
+          const item = items[j];
+          if (Path.equals(item.realPath, focus.path)) {
+            const text = item.text;
+            if (
+              cursorOffset >= item.index &&
+              cursorOffset <= item.index + text.length
+            ) {
+              currentItem = item;
+              isBreak = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    console.log('----------', 'currentItem', currentItem, '----------cyy log');
+    if (!currentItem) {
+      return;
+    }
+    this.resetFont();
+    currentItem.font && (this.ctx!.font = currentItem.font);
+    const {
+      width,
+      actualBoundingBoxAscent,
+      actualBoundingBoxDescent,
+    }: TextMetrics = this.ctx!.measureText(
+      currentItem.text.substring(0, cursorOffset - currentItem.index),
+    );
+
+    if (this.textarea) {
+      const { baseLineY } = this.lines[i - 1];
+
+      let fontHeight = currentItem.fontSize
+        ? currentItem.fontSize
+        : this.handledCanvasOptions.fontSize;
+
+      const descent =
+        fontHeight / (actualBoundingBoxAscent / actualBoundingBoxDescent + 1);
+
+      // fontHeight = fontHeight * 1.1;
+      const fontTopToTop = baseLineY - fontHeight;
+
+      this.textarea.style.left = `${(currentItem.x + width) / dpr}px`;
+      this.textarea.style.fontSize = `${fontHeight / dpr}px`;
+      this.textarea.style.top = `${(fontTopToTop + descent) / dpr}px`;
+      this.textarea.style.height = `${fontHeight / dpr}px`;
+      this.textarea.style.lineHeight = `${fontHeight / dpr}px`;
+      setTimeout(() => {
+        this.textarea?.focus();
+        IS_FOCUSED.set(this.editor, true);
+      });
+    }
+  }
+
   calculateLines(
     text: string,
     info: { font?: string; fontSize: number },
+    index: number = 0,
     recursive: boolean = false,
   ) {
     if (!this.ctx) {
@@ -482,11 +669,13 @@ export class SlateCanvas {
       topY: 0,
       height: 0,
       items: [],
+      realPath: [this.currentParagraph],
     };
 
     this.lines[this.currentLineIndex].items.push(
       Object.assign(
         {
+          index,
           text: text.substring(0, splitLength),
           x: this.currentRenderingBaselineX,
           realPath: [this.currentParagraph, this.currentParagraphSection],
@@ -522,21 +711,12 @@ export class SlateCanvas {
     } else {
       this.currentLineIndex++;
       this.isJustBreakLine = true;
-      this.calculateLines(text.substring(splitLength), info, true);
+      this.calculateLines(
+        text.substring(splitLength),
+        info,
+        index + splitLength,
+      );
     }
-
-    // this.ctx.save();
-    // this.ctx.beginPath();
-    // this.ctx.moveTo(
-    //   this.initialPosition.x,
-    //   this.initialPosition.y + lineHeight,
-    // );
-    // this.ctx.lineTo(
-    //   this.initialPosition.x + width,
-    //   this.initialPosition.y + lineHeight,
-    // );
-    // this.ctx.stroke();
-    // this.ctx.restore();
   }
 
   /**
