@@ -54,12 +54,24 @@ export function createCanvas(
   return { canvasWrapper, textarea, canvas, ctx };
 }
 
-export function createCxtForCalculate(
+/**
+ * create offscreen canvas
+ * @param editor
+ * @param handledCanvasOptions
+ */
+export function createOffscreenCanvas(
   editor: CanvasEditor,
-): CanvasRenderingContext2D {
+  handledCanvasOptions: CanvasOptionsType,
+): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D} {
+  const { width, height, styleWidth, styleHeight } = handledCanvasOptions;
+
   const canvas: HTMLCanvasElement = document.createElement('canvas');
-  canvas.width = 100;
-  canvas.height = 100;
+  canvas.width = width;
+  canvas.height = height;
+  canvas.style.width = styleWidth + 'px';
+  canvas.style.height = styleHeight + 'px';
+
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-  return ctx;
+
+  return { canvas, ctx };
 }

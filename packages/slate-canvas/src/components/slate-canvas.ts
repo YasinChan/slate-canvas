@@ -2,12 +2,13 @@ import {
   Editor,
   Node,
   Path,
+  Point,
   Scrubber,
   Transforms,
   BaseEditor,
   Descendant,
 } from 'slate';
-import { createCanvas } from '../components/create-canvas';
+import { createCanvas, createOffscreenCanvas } from '../components/create-canvas';
 
 import {
   setAccuracy,
@@ -36,10 +37,19 @@ import {
 export class SlateCanvas {
   public canvasOptions: Partial<CanvasOptionsType> = {};
   public initialValue: Descendant[];
-  private canvasWrapper: HTMLDivElement | undefined = undefined;
-  private textarea: HTMLTextAreaElement | undefined = undefined;
-  private canvas: HTMLCanvasElement | undefined = undefined;
-  private ctx: CanvasRenderingContext2D | undefined = undefined;
+  private readonly canvasWrapper: HTMLDivElement;
+  private readonly textarea: HTMLTextAreaElement;
+  private readonly canvas: HTMLCanvasElement;
+  private readonly ctx: CanvasRenderingContext2D;
+
+  // for render word
+  private readonly wordOffscreenCanvas: HTMLCanvasElement;
+  private readonly wordOffscreenCtx: CanvasRenderingContext2D;
+
+  // for render range
+  private readonly rangeOffscreenCanvas: HTMLCanvasElement;
+  private readonly rangeOffscreenCtx: CanvasRenderingContext2D;
+
   // Converts the values in `canvasOptions` in `options` by precision.
   private handledCanvasOptions: CanvasOptionsType = defaultCanvasOptions;
   // The position at which to initially start rendering the content
@@ -75,10 +85,13 @@ export class SlateCanvas {
   private cursorPosition: PositionInfoType | undefined = undefined;
   private selectionRange:
     | {
-        start: PositionInfoType;
-        end: PositionInfoType;
-      }
+    start: PositionInfoType;
+    end: PositionInfoType;
+  }
     | undefined = undefined;
+
+  // when mousedown, record current point.
+  private currentAnchor: Point | undefined = undefined;
 
   constructor(
     public editor: BaseEditor,
@@ -91,6 +104,24 @@ export class SlateCanvas {
 
     this.check();
     this.optionsHandler();
+
+    const { canvasWrapper, textarea, canvas, ctx } = createCanvas(
+      this.editor,
+      this.handledCanvasOptions,
+    );
+    this.canvasWrapper = canvasWrapper;
+    this.textarea = textarea;
+    this.canvas = canvas;
+    this.ctx = ctx;
+
+    const { canvas: wordOffscreenCanvas, ctx: wordeOffscreenCtx } = createOffscreenCanvas(this.editor, this.handledCanvasOptions);
+    this.wordOffscreenCanvas = wordOffscreenCanvas;
+    this.wordOffscreenCtx = wordeOffscreenCtx;
+
+    const { canvas: rangeOffscreenCanvas, ctx: rangeOffscreenCtx } = createOffscreenCanvas(this.editor, this.handledCanvasOptions);
+    this.rangeOffscreenCanvas = rangeOffscreenCanvas;
+    this.rangeOffscreenCtx = rangeOffscreenCtx;
+
     this.init();
     this.listen();
   }
@@ -131,12 +162,12 @@ export class SlateCanvas {
         if (key === 'width') {
           this.handledCanvasOptions['styleWidth'] = this.canvasOptions[
             key
-          ] as number;
+            ] as number;
         }
         if (key === 'height') {
           this.handledCanvasOptions['styleHeight'] = this.canvasOptions[
             key
-          ] as number;
+            ] as number;
         }
         this.handledCanvasOptions[key] = setAccuracy(
           this.canvasOptions[key] as number,
@@ -146,25 +177,12 @@ export class SlateCanvas {
   }
 
   init() {
-    const { canvasWrapper, textarea, canvas, ctx } = createCanvas(
-      this.editor,
-      this.handledCanvasOptions,
-    );
-    this.canvasWrapper = canvasWrapper;
-    this.textarea = textarea;
-    this.canvas = canvas;
-    this.ctx = ctx;
-
     this.render();
 
     this.onChange();
   }
 
   listen() {
-    if (!this.canvas || !this.ctx || !this.textarea) {
-      return;
-    }
-
     document.body.addEventListener('keydown', (e: KeyboardEvent) => {
       const isFocus = IS_FOCUSED.get(this.editor);
       if (!isFocus) {
@@ -186,41 +204,40 @@ export class SlateCanvas {
       this.isMouseDown = true;
       const { section, line, offsetInfo } = this.onMouseEvent(e);
 
-      const { offset, left, ascentDescentRatio } = offsetInfo;
+      const { offset } = offsetInfo;
+
+      this.currentAnchor = {
+        path: section.realPath,
+        offset: section.index + offset,
+      };
 
       const selection = {
-        anchor: {
-          path: section.realPath,
-          offset: section.index + offset,
-        },
-        focus: {
-          path: section.realPath,
-          offset: section.index + offset,
-        },
+        anchor: this.currentAnchor,
+        focus: this.currentAnchor,
       };
 
       Transforms.select(this.editor, selection);
 
-      this.cursorPosition = {
-        line,
-        section,
-        left,
-        ascentDescentRatio,
-      };
-      this.selectionRange = {
-        start: {
-          line,
-          section,
-          left,
-          ascentDescentRatio,
-        },
-        end: {
-          line,
-          section,
-          left,
-          ascentDescentRatio,
-        },
-      };
+      // this.cursorPosition = {
+      //   line,
+      //   section,
+      //   left,
+      //   ascentDescentRatio,
+      // };
+      // this.selectionRange = {
+      //   start: {
+      //     line,
+      //     section,
+      //     left,
+      //     ascentDescentRatio,
+      //   },
+      //   end: {
+      //     line,
+      //     section,
+      //     left,
+      //     ascentDescentRatio,
+      //   },
+      // };
     });
 
     document.body.addEventListener(
@@ -234,7 +251,18 @@ export class SlateCanvas {
           return;
         }
 
-        const { section, line, offsetInfo } = this.onMouseEvent(e);
+        const { section, offsetInfo } = this.onMouseEvent(e);
+        const { offset } = offsetInfo;
+
+        const focus = {
+          path: section.realPath,
+          offset: section.index + offset,
+        };
+
+        Transforms.select(this.editor, {
+          anchor: this.currentAnchor || focus,
+          focus,
+        });
       }, 100),
     );
 
@@ -335,15 +363,6 @@ export class SlateCanvas {
     isLast: boolean = false,
   ): FontOffsetType {
     let fontHeight = this.handledCanvasOptions.fontSize;
-
-    if (!this.ctx) {
-      return {
-        offset: 0,
-        left: 0,
-        fontHeight,
-        ascentDescentRatio: 1,
-      };
-    }
 
     this.resetFont();
     const { text, font, x } = section;
@@ -524,6 +543,7 @@ export class SlateCanvas {
       return;
     }
     const { focus } = operation.newProperties;
+    console.log('----------', 'operation', operation, '----------cyy log');
     if (!focus) {
       return;
     }
@@ -531,7 +551,7 @@ export class SlateCanvas {
 
     const cursorOffset = focus?.offset;
 
-    let currentItem;
+    let currentItem: TextItemType | undefined;
     let i;
     let isBreak = false;
     for (i = 0; i < this.lines.length; i++) {
@@ -558,6 +578,15 @@ export class SlateCanvas {
       }
     }
     console.log('----------', 'currentItem', currentItem, '----------cyy log');
+    this.drawTextarea(currentItem, cursorOffset, i);
+    this.drawRange();
+  }
+
+  drawTextarea(
+    currentItem: TextItemType | undefined,
+    cursorOffset: number,
+    i: number,
+  ) {
     if (!currentItem) {
       return;
     }
@@ -584,6 +613,7 @@ export class SlateCanvas {
       // fontHeight = fontHeight * 1.1;
       const fontTopToTop = baseLineY - fontHeight;
 
+      this.textarea.blur();
       this.textarea.style.left = `${(currentItem.x + width) / dpr}px`;
       this.textarea.style.fontSize = `${fontHeight / dpr}px`;
       this.textarea.style.top = `${(fontTopToTop + descent) / dpr}px`;
@@ -596,15 +626,29 @@ export class SlateCanvas {
     }
   }
 
+  drawRange() {
+    if (this.rangeOffscreenCtx) {
+      const { width, height } = this.rangeOffscreenCanvas;
+      this.rangeOffscreenCtx.clearRect(0, 0, width, height);
+      this.rangeOffscreenCtx.globalAlpha = 0.5;
+      this.rangeOffscreenCtx.fillStyle = 'red';
+      this.rangeOffscreenCtx.fillRect(10, 10, 100, 100);
+      this.ctx.drawImage(this.rangeOffscreenCanvas, 0, 0);
+    }
+  }
+
+  drawMainCanvas() {
+    const { width, height } = this.canvas;
+    this.ctx.clearRect(0, 0, width, height);
+    this.ctx.drawImage(this.wordOffscreenCanvas, 0, 0)
+  }
+
   calculateLines(
     text: string,
     info: { font?: string; fontSize: number },
     index: number = 0,
     recursive: boolean = false,
   ) {
-    if (!this.ctx) {
-      return;
-    }
     info.font && (this.ctx.font = info.font);
 
     const {
@@ -727,10 +771,6 @@ export class SlateCanvas {
    * @param text
    */
   getSplitLength(contentWidth: number, width: number, text: string): number {
-    if (!this.ctx) {
-      return 0;
-    }
-
     const textLength = text.length;
 
     if (width <= contentWidth) {
@@ -770,16 +810,10 @@ export class SlateCanvas {
   }
 
   resetFont() {
-    if (!this.ctx) {
-      return;
-    }
     this.ctx.font = initCreateFontValue(this.handledCanvasOptions);
   }
 
   fillText(text: string) {
-    if (!this.ctx) {
-      return;
-    }
   }
 
   getCanvasWrapper() {
