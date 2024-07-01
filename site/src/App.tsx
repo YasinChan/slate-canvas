@@ -7,6 +7,7 @@ export default defineComponent({
   // Thai and Arabic are not supported at this time.
   setup() {
     const cvs = ref<HTMLElement>();
+    const cvs2 = ref<HTMLElement>();
     const state = reactive({
       text1:
         '那aaa안녕하세요一天我二十一岁，在我一生的黄金时代，我有asdfasdf好多奢望。我想爱，想吃，还想在一瞬间变成天上半明半暗的云，后来我才知道，',
@@ -65,10 +66,31 @@ export default defineComponent({
       const canvas = sc.getCanvas() as HTMLCanvasElement;
       canvas!.style.backgroundColor = 'rgb(184, 190, 196)';
       cvs.value?.appendChild(canvasWrapper);
+
+      const editor2 = withCanvas(createEditor());
+
+      // @ts-ignore
+      window.editor2 = editor2;
+
+      const sc2 = new SlateCanvas(editor2, {
+        canvasOptions: {
+          width: 500,
+          height: 500,
+          accuracy: 1,
+          lineHeight: 2.5,
+          padding: 20,
+        },
+        initialValue: initialValue,
+      });
+      const canvasWrapper2 = sc2.getCanvasWrapper() as HTMLDivElement;
+      const canvas2 = sc2.getCanvas() as HTMLCanvasElement;
+      canvas2!.style.backgroundColor = 'rgb(184, 190, 196)';
+      cvs2.value?.appendChild(canvasWrapper2);
     });
 
     return {
       cvs,
+      cvs2,
       ...toRefs(state),
     };
   },
@@ -90,6 +112,7 @@ export default defineComponent({
           </div>
         )}
         <div ref="cvs"></div>
+        <div ref="cvs2"></div>
         <button onClick={() => (this.show = !this.show)}>
           {this.show ? 'hide' : 'show'} compare word
         </button>

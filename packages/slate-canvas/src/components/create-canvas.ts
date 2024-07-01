@@ -1,5 +1,5 @@
 import { CanvasEditor } from '../plugin/canvas-editor';
-import { initCreateFontValue, dpr, CanvasOptionsType } from '../utils';
+import { initCreateFontValue, CanvasOptionsType, getDPR } from '../utils';
 
 export type CreateCanvasReturnType = {
   canvasWrapper: HTMLDivElement;
@@ -14,6 +14,8 @@ export function createCanvas(
 ): CreateCanvasReturnType {
   const { width, height, styleWidth, styleHeight, fontSize } =
     handledCanvasOptions;
+
+  const dpr = getDPR(editor);
 
   const canvasWrapper = document.createElement('div');
   canvasWrapper.style.position = 'relative';
@@ -47,7 +49,7 @@ export function createCanvas(
 
   // ctx.textBaseline = 'middle';
 
-  ctx.font = initCreateFontValue(handledCanvasOptions);
+  ctx.font = initCreateFontValue(editor, handledCanvasOptions);
 
   ctx.save();
 
@@ -62,7 +64,7 @@ export function createCanvas(
 export function createOffscreenCanvas(
   editor: CanvasEditor,
   handledCanvasOptions: CanvasOptionsType,
-): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D} {
+): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const { width, height, styleWidth, styleHeight } = handledCanvasOptions;
 
   const canvas: HTMLCanvasElement = document.createElement('canvas');

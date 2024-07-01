@@ -1,51 +1,84 @@
 import { CanvasOptionsType, defaultCanvasOptions } from './options';
+import { CanvasEditor } from '../plugin/canvas-editor';
+import { DPR, ACCURACY, FONT_DEFAULT } from '../utils/weak-maps';
+
 export * from './options';
 
-let accuracy: number = 1;
+export function getAccuracy(editor: CanvasEditor): number {
+  return ACCURACY.get(editor) || 1;
+}
 
-export let dpr: number = 2;
+export function getDPR(editor: CanvasEditor): number {
+  return DPR.get(editor) || 2;
+}
+
 /**
  * set canvas accuracy
+ * @param editor
  * @param num
  * @param acy
  */
-export function setAccuracy(num: number, acy?: number): number {
-  accuracy = acy || accuracy;
+export function setAccuracy(
+  editor: CanvasEditor,
+  num: number,
+  acy?: number,
+): number {
+  acy = acy || getAccuracy(editor);
+  ACCURACY.set(editor, acy);
   const devicePixelRatio = window.devicePixelRatio || 2;
-  dpr = devicePixelRatio * accuracy;
+  const dpr = devicePixelRatio * acy;
+  DPR.set(editor, dpr);
 
   return num * dpr;
 }
 
-let fontStyleDefault: string = defaultCanvasOptions.fontStyle;
-let fontVariantDefault: string = defaultCanvasOptions.fontVariant;
-let fontWeightDefault: string = defaultCanvasOptions.fontWeight;
-let fontSizeDefault: number = defaultCanvasOptions.fontSize;
-let lineHeightDefault: string | number = defaultCanvasOptions.lineHeight;
-let fontFamilyDefault: string = defaultCanvasOptions.fontFamily;
+// let fontStyleDefault: string = defaultCanvasOptions.fontStyle;
+// let fontVariantDefault: string = defaultCanvasOptions.fontVariant;
+// let fontWeightDefault: string = defaultCanvasOptions.fontWeight;
+// let fontSizeDefault: number = defaultCanvasOptions.fontSize;
+// let lineHeightDefault: string | number = defaultCanvasOptions.lineHeight;
+// let fontFamilyDefault: string = defaultCanvasOptions.fontFamily;
 
 export function initCreateFontValue(
+  editor: CanvasEditor,
   handledCanvasOptions: CanvasOptionsType,
 ): string {
-  fontStyleDefault = handledCanvasOptions.fontStyle || fontStyleDefault;
-  fontVariantDefault = handledCanvasOptions.fontVariant || fontVariantDefault;
-  fontWeightDefault = handledCanvasOptions.fontWeight || fontWeightDefault;
-  fontSizeDefault = handledCanvasOptions.fontSize || fontSizeDefault;
-  lineHeightDefault = handledCanvasOptions.lineHeight || lineHeightDefault;
-  fontFamilyDefault = handledCanvasOptions.fontFamily || fontFamilyDefault;
+  const fontStyleDefault =
+    handledCanvasOptions.fontStyle || defaultCanvasOptions.fontStyle;
+  const fontVariantDefault =
+    handledCanvasOptions.fontVariant || defaultCanvasOptions.fontVariant;
+  const fontWeightDefault =
+    handledCanvasOptions.fontWeight || defaultCanvasOptions.fontWeight;
+  const fontSizeDefault =
+    handledCanvasOptions.fontSize || defaultCanvasOptions.fontSize;
+  const lineHeightDefault =
+    handledCanvasOptions.lineHeight || defaultCanvasOptions.lineHeight;
+  const fontFamilyDefault =
+    handledCanvasOptions.fontFamily || defaultCanvasOptions.fontFamily;
+
+  FONT_DEFAULT.set(editor, {
+    fontStyleDefault,
+    fontVariantDefault,
+    fontWeightDefault,
+    fontSizeDefault,
+    lineHeightDefault,
+    fontFamilyDefault,
+  });
 
   return `${fontStyleDefault} ${fontVariantDefault} ${fontWeightDefault} ${fontSizeDefault}px/${lineHeightDefault} ${fontFamilyDefault}`;
 }
 
 export function createFontValue(
+  editor: CanvasEditor,
   handledCanvasOptions: Partial<CanvasOptionsType>,
 ): string {
+  const fontDefault = FONT_DEFAULT.get(editor);
   const {
-    fontStyle = fontStyleDefault,
-    fontVariant = fontVariantDefault,
-    fontWeight = fontWeightDefault,
-    fontSize = fontSizeDefault,
-    fontFamily = fontFamilyDefault,
+    fontStyle = fontDefault?.fontStyleDefault,
+    fontVariant = fontDefault?.fontVariantDefault,
+    fontWeight = fontDefault?.fontWeightDefault,
+    fontSize = fontDefault?.fontSizeDefault,
+    fontFamily = fontDefault?.fontFamilyDefault,
   } = handledCanvasOptions;
 
   return `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}px ${fontFamily}`;
@@ -97,4 +130,8 @@ export function throttle<T extends (...args: any[]) => any>(
       );
     }
   };
+}
+
+export function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
 }

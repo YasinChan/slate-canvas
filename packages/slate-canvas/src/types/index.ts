@@ -20,7 +20,8 @@ export type TextItemType = {
   fontSize?: number;
   x: number;
   realPath: number[];
-  index: number;
+  index: number; // Since the canvas is rendered on a row-by-row basis,
+  // the index at the beginning of the row that corresponds to this segment is recorded here.
 };
 export type LinesType = {
   baseLineY: number; // The relative vertical position of the calculated baseline based on `textBaseline: alphabetic` to the top of the canvas.
