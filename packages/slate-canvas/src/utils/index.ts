@@ -32,13 +32,6 @@ export function setAccuracy(
   return num * dpr;
 }
 
-// let fontStyleDefault: string = defaultCanvasOptions.fontStyle;
-// let fontVariantDefault: string = defaultCanvasOptions.fontVariant;
-// let fontWeightDefault: string = defaultCanvasOptions.fontWeight;
-// let fontSizeDefault: number = defaultCanvasOptions.fontSize;
-// let lineHeightDefault: string | number = defaultCanvasOptions.lineHeight;
-// let fontFamilyDefault: string = defaultCanvasOptions.fontFamily;
-
 export function initCreateFontValue(
   editor: CanvasEditor,
   handledCanvasOptions: CanvasOptionsType,
@@ -70,7 +63,7 @@ export function initCreateFontValue(
 
 export function createFontValue(
   editor: CanvasEditor,
-  handledCanvasOptions: Partial<CanvasOptionsType>,
+  options: Partial<CanvasOptionsType>,
 ): string {
   const fontDefault = FONT_DEFAULT.get(editor);
   const {
@@ -79,7 +72,7 @@ export function createFontValue(
     fontWeight = fontDefault?.fontWeightDefault,
     fontSize = fontDefault?.fontSizeDefault,
     fontFamily = fontDefault?.fontFamilyDefault,
-  } = handledCanvasOptions;
+  } = options;
 
   return `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}px ${fontFamily}`;
 }

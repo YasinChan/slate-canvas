@@ -8,6 +8,7 @@ import {
   BaseEditor,
   Descendant,
   Range,
+  BaseSetSelectionOperation,
 } from 'slate';
 import {
   createCanvas,
@@ -28,9 +29,7 @@ import {
   CanvasOptionsType,
 } from '../utils';
 
-import findOffset from '../utils/find-offset';
-
-import { IS_FOCUSED } from '../utils/weak-maps';
+import { IS_FOCUSED, IS_RANGING } from '../utils/weak-maps';
 
 import { KEY_CODE_ENUM } from '../config/key';
 
@@ -40,6 +39,7 @@ import {
   FontOffsetType,
   PositionInfoType,
 } from '../types';
+import { CanvasEditor } from '@/plugin/canvas-editor';
 
 export class SlateCanvas {
   public initialValue: Descendant[];
@@ -47,6 +47,9 @@ export class SlateCanvas {
   private readonly textarea: HTMLTextAreaElement;
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
+
+  private readonly textMetricsOffscreenCanvas: HTMLCanvasElement;
+  private readonly textMetricsOffscreenCtx: CanvasRenderingContext2D;
 
   // for render word
   private readonly wordOffscreenCanvas: HTMLCanvasElement;
@@ -89,6 +92,7 @@ export class SlateCanvas {
   private isJustBreakLine: boolean = true;
 
   private isMouseDown: boolean = false;
+  private isMouseMoving: boolean = false;
   private cursorPosition: PositionInfoType | undefined = undefined;
   private selectionRange:
     | {
@@ -121,11 +125,19 @@ export class SlateCanvas {
     this.canvas = canvas;
     this.ctx = ctx;
 
-    const { canvas: wordOffscreenCanvas, ctx: wordeOffscreenCtx } =
+    // for calculate textMetrics
+    const { canvas: textMetricsOffscreenCanvas, ctx: textMetricsOffscreenCtx } =
+      createOffscreenCanvas(this.editor, this.handledCanvasOptions);
+    this.textMetricsOffscreenCanvas = textMetricsOffscreenCanvas;
+    this.textMetricsOffscreenCtx = textMetricsOffscreenCtx;
+
+    // for render word
+    const { canvas: wordOffscreenCanvas, ctx: wordOffscreenCtx } =
       createOffscreenCanvas(this.editor, this.handledCanvasOptions);
     this.wordOffscreenCanvas = wordOffscreenCanvas;
-    this.wordOffscreenCtx = wordeOffscreenCtx;
+    this.wordOffscreenCtx = wordOffscreenCtx;
 
+    // for render range
     const { canvas: rangeOffscreenCanvas, ctx: rangeOffscreenCtx } =
       createOffscreenCanvas(this.editor, this.handledCanvasOptions);
     this.rangeOffscreenCanvas = rangeOffscreenCanvas;
@@ -141,9 +153,7 @@ export class SlateCanvas {
   check() {
     if (!Node.isNodeList(this.initialValue)) {
       throw new Error(
-        `[Slate] initialValue is invalid! Expected a list of elements but got: ${Scrubber.stringify(
-          this.initialValue,
-        )}`,
+        `[Slate] initialValue is invalid! Expected a list of elements but got: ${Scrubber.stringify(this.initialValue)}`,
       );
     }
     if (!Editor.isEditor(this.editor)) {
@@ -201,9 +211,11 @@ export class SlateCanvas {
         return;
       }
       if (e.code === KEY_CODE_ENUM['ARROW_LEFT']) {
+        Transforms.collapse(this.editor, { edge: 'focus' });
         Transforms.move(this.editor, { distance: 1, reverse: true });
       }
       if (e.code === KEY_CODE_ENUM['ARROW_RIGHT']) {
+        Transforms.collapse(this.editor, { edge: 'focus' });
         Transforms.move(this.editor, { distance: 1, reverse: false });
       }
     });
@@ -266,6 +278,8 @@ export class SlateCanvas {
           return;
         }
 
+        this.isMouseMoving = true;
+
         const { section, offsetInfo } = this.onMouseEvent(e);
         const { offset } = offsetInfo;
 
@@ -286,6 +300,7 @@ export class SlateCanvas {
         return;
       }
       this.isMouseDown = false;
+      this.isMouseMoving = false;
       if (e.target !== this.canvas) {
         return;
       }
@@ -323,20 +338,9 @@ export class SlateCanvas {
       // If two adjacent sections do not have the same fontsize,
       // then the position between them should correspond to the previous fontsize.
       section = items[i - 2];
-      offsetInfo = findOffset(
-        this.editor,
-        this.handledCanvasOptions,
-        section,
-        section.x,
-        true,
-      );
+      offsetInfo = this.findOffset(section, section.x, true);
     } else {
-      offsetInfo = findOffset(
-        this.editor,
-        this.handledCanvasOptions,
-        section,
-        currentSectionClickX,
-      );
+      offsetInfo = this.findOffset(section, currentSectionClickX);
     }
 
     return { section, line, offsetInfo };
@@ -453,15 +457,18 @@ export class SlateCanvas {
 
       switch (operation.type) {
         case 'set_selection':
-          const { selection } = this.editor;
-          this.setSelection(<Range>selection);
+          this.setSelection(operation);
           break;
       }
     };
   }
 
-  setSelection(selection: Range) {
-    const { focus } = selection;
+  setSelection(operation: BaseSetSelectionOperation) {
+    const selection = this.editor.selection;
+    if (!(selection && selection.focus)) {
+      return;
+    }
+    const { focus, anchor } = selection;
     if (!focus) {
       return;
     }
@@ -509,7 +516,25 @@ export class SlateCanvas {
     const left = currentItem.x + textMetrics.width;
 
     this.drawTextarea(currentItem, textMetrics, baseLineY, left);
-    this.drawRange(topY, left, height);
+
+    if (this.isMouseMoving) {
+      const isExpanded = Range.isExpanded(selection);
+      if (isExpanded) {
+        IS_RANGING.set(this.editor, true);
+        this.clearRangeRect();
+        this.drawRange(topY, left, height);
+      } else {
+        this.clearRangeRect();
+        this.drawMainCanvas();
+      }
+    } else {
+      const isRanging = IS_RANGING.get(this.editor);
+      if (isRanging) {
+        IS_RANGING.set(this.editor, false);
+        this.clearRangeRect();
+        this.drawMainCanvas();
+      }
+    }
   }
 
   drawTextarea(
@@ -551,6 +576,10 @@ export class SlateCanvas {
     }
   }
 
+  clearRangeRect() {
+    const { width, height } = this.rangeOffscreenCanvas;
+    this.rangeOffscreenCtx.clearRect(0, 0, width, height);
+  }
   drawRange(topY: number, left: number, lineHeight: number) {
     const { selection } = this.editor;
     const isCollapsed = Range.isCollapsed(<Range>selection);
@@ -565,8 +594,6 @@ export class SlateCanvas {
       return;
     }
 
-    const { width, height } = this.rangeOffscreenCanvas;
-    this.rangeOffscreenCtx.clearRect(0, 0, width, height);
     this.rangeOffscreenCtx.globalAlpha = 0.5;
     this.rangeOffscreenCtx.fillStyle = 'red';
     this.rangeOffscreenCtx.fillRect(left, topY, 100, lineHeight);
@@ -747,6 +774,107 @@ export class SlateCanvas {
       this.editor,
       this.handledCanvasOptions,
     );
+  }
+
+  resetTextMetricsOffscreenFont() {
+    this.textMetricsOffscreenCtx.font = initCreateFontValue(
+      this.editor,
+      this.handledCanvasOptions,
+    );
+  }
+
+  /**
+   * find selection offset
+   * @param section
+   * @param currentSectionClickX current section click x
+   * @param isLast If you know that the current is the last element in the section, you can calculate the last without the previous steps.
+   */
+  findOffset(
+    section: TextItemType,
+    currentSectionClickX: number,
+    isLast: boolean = false,
+  ): FontOffsetType {
+    let fontHeight = this.handledCanvasOptions.fontSize;
+    this.resetTextMetricsOffscreenFont();
+
+    const { text, font, x } = section;
+    font && (this.textMetricsOffscreenCtx.font = font);
+
+    let index = 1;
+    let left = x;
+    let ascentDescentRatio = 1;
+
+    if (isLast) {
+      const {
+        width,
+        actualBoundingBoxDescent,
+        actualBoundingBoxAscent,
+      }: TextMetrics = this.textMetricsOffscreenCtx.measureText(text);
+      return {
+        offset: text.length,
+        left: width + x,
+        fontHeight: actualBoundingBoxDescent + actualBoundingBoxAscent,
+        ascentDescentRatio: actualBoundingBoxAscent / actualBoundingBoxDescent,
+      };
+    }
+
+    while (index <= text.length) {
+      const currentText = text.slice(index - 1, index);
+      const {
+        width: currentTextWidth,
+        actualBoundingBoxDescent: currentTextActualBoundingBoxDescent,
+        actualBoundingBoxAscent: currentTextActualBoundingBoxAscent,
+      }: TextMetrics = this.textMetricsOffscreenCtx.measureText(currentText);
+      if (index === 1) {
+        ascentDescentRatio =
+          currentTextActualBoundingBoxAscent /
+          currentTextActualBoundingBoxDescent;
+        fontHeight =
+          currentTextActualBoundingBoxDescent +
+          currentTextActualBoundingBoxAscent;
+        if (currentSectionClickX < currentTextWidth / 2) {
+          break;
+        } else if (
+          currentSectionClickX >= currentTextWidth / 2 &&
+          currentSectionClickX < currentTextWidth
+        ) {
+          left = x + currentTextWidth;
+          index++;
+          break;
+        }
+      }
+
+      const t = text.slice(0, index);
+      const {
+        width: textWidth,
+        actualBoundingBoxDescent: textActualBoundingBoxDescent,
+        actualBoundingBoxAscent: textActualBoundingBoxAscent,
+      }: TextMetrics = this.textMetricsOffscreenCtx.measureText(t);
+      if (currentSectionClickX < textWidth - currentTextWidth / 2) {
+        break;
+      } else if (
+        currentSectionClickX >= textWidth - currentTextWidth / 2 &&
+        currentSectionClickX < textWidth
+      ) {
+        left = x + textWidth;
+        ascentDescentRatio =
+          textActualBoundingBoxAscent / textActualBoundingBoxDescent;
+        fontHeight = textActualBoundingBoxDescent + textActualBoundingBoxAscent;
+        index++;
+        break;
+      }
+      ascentDescentRatio =
+        textActualBoundingBoxAscent / textActualBoundingBoxDescent;
+      fontHeight = textActualBoundingBoxDescent + textActualBoundingBoxAscent;
+      left = x + textWidth;
+      index++;
+    }
+    return {
+      offset: index - 1,
+      left,
+      fontHeight,
+      ascentDescentRatio,
+    };
   }
 
   fillText(text: string) {}
