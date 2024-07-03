@@ -33,12 +33,7 @@ import { IS_FOCUSED, IS_RANGING } from '../utils/weak-maps';
 
 import { KEY_CODE_ENUM } from '../config/key';
 
-import {
-  TextItemType,
-  LinesType,
-  FontOffsetType,
-  PositionInfoType,
-} from '../types';
+import { TextItemType, LinesType, CursorLocationInfoType } from '../types';
 import { CanvasEditor } from '@/plugin/canvas-editor';
 
 export class SlateCanvas {
@@ -93,11 +88,11 @@ export class SlateCanvas {
 
   private isMouseDown: boolean = false;
   private isMouseMoving: boolean = false;
-  private cursorPosition: PositionInfoType | undefined = undefined;
-  private selectionRange:
+  cursorLocationInfo: CursorLocationInfoType | undefined = undefined;
+  selectionRange:
     | {
-        start: PositionInfoType;
-        end: PositionInfoType;
+        start: CursorLocationInfoType;
+        end: CursorLocationInfoType;
       }
     | undefined = undefined;
 
@@ -229,9 +224,9 @@ export class SlateCanvas {
         return;
       }
       this.isMouseDown = true;
-      const { section, line, offsetInfo } = this.onMouseEvent(e);
-
-      const { offset } = offsetInfo;
+      this.onMouseEvent(e);
+      const { section, offset } = this
+        .cursorLocationInfo as CursorLocationInfoType;
 
       this.currentAnchor = {
         path: section.realPath,
@@ -244,27 +239,6 @@ export class SlateCanvas {
       };
 
       Transforms.select(this.editor, selection);
-
-      // this.cursorPosition = {
-      //   line,
-      //   section,
-      //   left,
-      //   ascentDescentRatio,
-      // };
-      // this.selectionRange = {
-      //   start: {
-      //     line,
-      //     section,
-      //     left,
-      //     ascentDescentRatio,
-      //   },
-      //   end: {
-      //     line,
-      //     section,
-      //     left,
-      //     ascentDescentRatio,
-      //   },
-      // };
     });
 
     document.body.addEventListener(
@@ -280,8 +254,9 @@ export class SlateCanvas {
 
         this.isMouseMoving = true;
 
-        const { section, offsetInfo } = this.onMouseEvent(e);
-        const { offset } = offsetInfo;
+        this.onMouseEvent(e);
+        const { section, offset } = this
+          .cursorLocationInfo as CursorLocationInfoType;
 
         const focus = {
           path: section.realPath,
@@ -332,35 +307,15 @@ export class SlateCanvas {
 
     const currentFontSize =
       section.fontSize || this.handledCanvasOptions.fontSize;
-    let offsetInfo: FontOffsetType;
     if (i > 1 && currentSectionClickX < currentFontSize / 2) {
       // As we can see, the height of the cursor is related to the fontsize of the current position.
       // If two adjacent sections do not have the same fontsize,
       // then the position between them should correspond to the previous fontsize.
       section = items[i - 2];
-      offsetInfo = this.findOffset(section, section.x, true);
+      this.setCursorLocationInfo(line, section, section.x, true);
     } else {
-      offsetInfo = this.findOffset(section, currentSectionClickX);
+      this.setCursorLocationInfo(line, section, currentSectionClickX);
     }
-
-    return { section, line, offsetInfo };
-  }
-
-  /**
-   * find line by offsetY
-   * @param offsetY
-   */
-  findLineByY(offsetY: number) {
-    // find line
-    let line = -1;
-    for (let i = 0; i < this.lines.length; i++) {
-      if (this.lines[i]['topY'] <= setAccuracy(this.editor, offsetY)) {
-        line = i;
-      } else {
-        break;
-      }
-    }
-    return line;
   }
 
   render() {
@@ -465,6 +420,7 @@ export class SlateCanvas {
 
   setSelection(operation: BaseSetSelectionOperation) {
     const selection = this.editor.selection;
+
     if (!(selection && selection.focus)) {
       return;
     }
@@ -505,17 +461,24 @@ export class SlateCanvas {
     if (!currentItem) {
       return;
     }
-    this.resetFont();
-    currentItem.font && (this.wordOffscreenCtx.font = currentItem.font);
-    const textMetrics: TextMetrics = this.wordOffscreenCtx.measureText(
+
+    this.resetTextMetricsOffscreenFont();
+    currentItem.font && (this.textMetricsOffscreenCtx.font = currentItem.font);
+    const textMetrics: TextMetrics = this.textMetricsOffscreenCtx.measureText(
       currentItem.text.substring(0, cursorOffset - currentItem.index),
     );
 
-    const { baseLineY, topY, height } = this.lines[i - 1];
+    // const { baseLineY, topY, height } = this.lines[i - 1];
 
-    const left = currentItem.x + textMetrics.width;
+    const left1 = textMetrics.width;
 
-    this.drawTextarea(currentItem, textMetrics, baseLineY, left);
+    this.setCursorLocationInfo(i - 1, currentItem, left1, false, true);
+
+    const { line, section, left, ascentDescentRatio } = this
+      .cursorLocationInfo as CursorLocationInfoType;
+    const { baseLineY, topY, height } = this.lines[line];
+
+    this.drawTextarea(section, ascentDescentRatio, baseLineY, left);
 
     if (this.isMouseMoving) {
       const isExpanded = Range.isExpanded(selection);
@@ -539,7 +502,7 @@ export class SlateCanvas {
 
   drawTextarea(
     currentItem: TextItemType | undefined,
-    textMetrics: TextMetrics,
+    ascentDescentRatio: number,
     baseLineY: number,
     left: number,
   ) {
@@ -549,15 +512,12 @@ export class SlateCanvas {
     if (this.textarea) {
       this.resetFont();
       currentItem.font && (this.wordOffscreenCtx.font = currentItem.font);
-      const { actualBoundingBoxAscent, actualBoundingBoxDescent }: TextMetrics =
-        textMetrics;
 
       let fontHeight = currentItem.fontSize
         ? currentItem.fontSize
         : this.handledCanvasOptions.fontSize;
 
-      const descent =
-        fontHeight / (actualBoundingBoxAscent / actualBoundingBoxDescent + 1);
+      const descent = fontHeight / (ascentDescentRatio + 1);
 
       // fontHeight = fontHeight * 1.1;
       const fontTopToTop = baseLineY - fontHeight;
@@ -582,11 +542,16 @@ export class SlateCanvas {
   }
   drawRange(topY: number, left: number, lineHeight: number) {
     const { selection } = this.editor;
-    const isCollapsed = Range.isCollapsed(<Range>selection);
+    if (!selection) {
+      return;
+    }
+    const isCollapsed = Range.isCollapsed(selection);
 
     if (isCollapsed) {
       return;
     }
+
+    this.findLineRangeBySelection();
 
     const { anchor, focus } = selection as Range;
 
@@ -673,7 +638,7 @@ export class SlateCanvas {
       topY: 0,
       height: 0,
       items: [],
-      realPath: [this.currentParagraph],
+      realPath: [this.currentParagraph, this.currentParagraphSection],
     };
 
     this.lines[this.currentLineIndex].items.push(
@@ -784,16 +749,37 @@ export class SlateCanvas {
   }
 
   /**
-   * find selection offset
+   * find line by offsetY
+   * @param offsetY
+   */
+  findLineByY(offsetY: number) {
+    // find line
+    let line = -1;
+    for (let i = 0; i < this.lines.length; i++) {
+      if (this.lines[i]['topY'] <= setAccuracy(this.editor, offsetY)) {
+        line = i;
+      } else {
+        break;
+      }
+    }
+    return line;
+  }
+
+  /**
+   * set cursor location info
+   * @param line
    * @param section
    * @param currentSectionClickX current section click x
-   * @param isLast If you know that the current is the last element in the section, you can calculate the last without the previous steps.
+   * @param isLast if you know that the current is the last element in the section, you can calculate the last without the previous steps.
+   * @param isCurrentSectionClickXAccurate Whether the current clickX is accurate, if it is accurate, 'left' will return currentSectionClickX directly.
    */
-  findOffset(
+  setCursorLocationInfo(
+    line: number,
     section: TextItemType,
     currentSectionClickX: number,
     isLast: boolean = false,
-  ): FontOffsetType {
+    isCurrentSectionClickXAccurate: boolean = false,
+  ) {
     let fontHeight = this.handledCanvasOptions.fontSize;
     this.resetTextMetricsOffscreenFont();
 
@@ -810,9 +796,24 @@ export class SlateCanvas {
         actualBoundingBoxDescent,
         actualBoundingBoxAscent,
       }: TextMetrics = this.textMetricsOffscreenCtx.measureText(text);
-      return {
+      this.cursorLocationInfo = {
         offset: text.length,
+        line,
+        section,
         left: width + x,
+        fontHeight: actualBoundingBoxDescent + actualBoundingBoxAscent,
+        ascentDescentRatio: actualBoundingBoxAscent / actualBoundingBoxDescent,
+      };
+    }
+
+    if (isCurrentSectionClickXAccurate) {
+      const { actualBoundingBoxDescent, actualBoundingBoxAscent }: TextMetrics =
+        this.textMetricsOffscreenCtx.measureText(text);
+      this.cursorLocationInfo = {
+        offset: text.length,
+        line,
+        section,
+        left: currentSectionClickX,
         fontHeight: actualBoundingBoxDescent + actualBoundingBoxAscent,
         ascentDescentRatio: actualBoundingBoxAscent / actualBoundingBoxDescent,
       };
@@ -869,12 +870,35 @@ export class SlateCanvas {
       left = x + textWidth;
       index++;
     }
-    return {
+    this.cursorLocationInfo = {
       offset: index - 1,
+      line,
+      section,
       left,
       fontHeight,
       ascentDescentRatio,
     };
+  }
+
+  findLineRangeBySelection() {
+    const { selection } = this.editor;
+    if (!selection) {
+      return;
+    }
+
+    // console.log('----------', 'selection', selection, '----------cyy log');
+    // const [point1, point2] = Editor.edges(this.editor, selection);
+    // const path1 = point1.path;
+    // const path2 = point2.path;
+    // const path1SuitableLines = this.lines
+    //   .map((l, index) => (Path.equals(path1, l.realPath) ? index : -1))
+    //   .filter((index) => index !== -1);
+    // console.log(
+    //   '----------',
+    //   'path1SuitableLines',
+    //   path1SuitableLines,
+    //   '----------cyy log',
+    // );
   }
 
   fillText(text: string) {}

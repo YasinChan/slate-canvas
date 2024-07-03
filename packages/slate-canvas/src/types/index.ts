@@ -30,16 +30,11 @@ export type LinesType = {
   items: TextItemType[];
   realPath: number[];
 };
-export type FontOffsetType = {
+export type CursorLocationInfoType = {
   offset: number;
-  left: number;
-  fontHeight: number;
-  ascentDescentRatio: number;
-};
-
-export type PositionInfoType = {
   line: number;
   section: TextItemType;
   left: number;
+  fontHeight: number;
   ascentDescentRatio: number;
 };
