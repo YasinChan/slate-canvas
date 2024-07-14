@@ -88,13 +88,12 @@ export class SlateCanvas {
 
   private isMouseDown: boolean = false;
   private isMouseMoving: boolean = false;
+  // All position information for the current cursor position
   cursorLocationInfo: CursorLocationInfoType | undefined = undefined;
-  selectionRange:
-    | {
-        start: CursorLocationInfoType;
-        end: CursorLocationInfoType;
-      }
-    | undefined = undefined;
+  selectionRange: {
+    start: CursorLocationInfoType | undefined;
+    end: CursorLocationInfoType | undefined;
+  };
 
   // when mousedown, record current point.
   private currentAnchor: Point | undefined = undefined;
@@ -107,6 +106,11 @@ export class SlateCanvas {
     this.options = options;
 
     this.initialValue = options.initialValue;
+
+    this.selectionRange = {
+      start: undefined,
+      end: undefined,
+    };
 
     this.check();
     this.optionsHandler();
@@ -271,9 +275,9 @@ export class SlateCanvas {
     );
 
     document.body.addEventListener('mouseup', (e: MouseEvent) => {
-      if (e.target !== this.canvas) {
-        return;
-      }
+      // if (e.target !== this.canvas) {
+      //   return;
+      // }
       this.isMouseDown = false;
       this.isMouseMoving = false;
       if (e.target !== this.canvas) {
@@ -476,7 +480,7 @@ export class SlateCanvas {
 
     const { line, section, left, ascentDescentRatio } = this
       .cursorLocationInfo as CursorLocationInfoType;
-    const { baseLineY, topY, height } = this.lines[line];
+    const { baseLineY } = this.lines[line];
 
     this.drawTextarea(section, ascentDescentRatio, baseLineY, left);
 
@@ -484,13 +488,20 @@ export class SlateCanvas {
       const isExpanded = Range.isExpanded(selection);
       if (isExpanded) {
         IS_RANGING.set(this.editor, true);
+        this.selectionRange.end = this.cursorLocationInfo;
         this.clearRangeRect();
-        this.drawRange(topY, left, height);
+        this.drawRange();
       } else {
         this.clearRangeRect();
         this.drawMainCanvas();
       }
     } else {
+      if (this.isMouseDown) {
+        this.selectionRange = {
+          start: this.cursorLocationInfo,
+          end: undefined,
+        };
+      }
       const isRanging = IS_RANGING.get(this.editor);
       if (isRanging) {
         IS_RANGING.set(this.editor, false);
@@ -540,7 +551,7 @@ export class SlateCanvas {
     const { width, height } = this.rangeOffscreenCanvas;
     this.rangeOffscreenCtx.clearRect(0, 0, width, height);
   }
-  drawRange(topY: number, left: number, lineHeight: number) {
+  drawRange() {
     const { selection } = this.editor;
     if (!selection) {
       return;
@@ -551,6 +562,64 @@ export class SlateCanvas {
       return;
     }
 
+    const sortRange = Object.values(this.selectionRange).sort((a, b) => {
+      const aL = a?.line || 0;
+      const bL = b?.line || 0;
+      return aL - bL;
+    });
+    if (!sortRange[0] || !sortRange[1]) {
+      return;
+    }
+
+    const renderLine = sortRange.map((s) => s?.line || 0);
+    const isSameLine = renderLine[0] === renderLine[1];
+
+    this.rangeOffscreenCtx.globalAlpha = 0.5;
+    this.rangeOffscreenCtx.fillStyle = 'red';
+
+    const { padding } = this.handledCanvasOptions;
+    if (isSameLine) {
+      const line = this.lines[renderLine[0]];
+      const { left } = sortRange[0];
+      const { topY, height } = line;
+      const width = sortRange[1].left - sortRange[0].left;
+      this.rangeOffscreenCtx.fillRect(left, topY, width, height);
+    } else {
+      const selectedLines = this.lines.slice(renderLine[0], renderLine[1] + 1);
+      for (let i = 0; i < selectedLines.length; i++) {
+        if (i === 0) {
+          // first select line
+          const { left } = sortRange[0];
+          const { topY, height, items } = selectedLines[i];
+          const width = items.reduce((a, b) => a + b.width, 0);
+
+          this.rangeOffscreenCtx.fillRect(
+            left,
+            topY,
+            width + padding - left,
+            height,
+          );
+        } else if (i === selectedLines.length - 1) {
+          // last select line
+          const { left } = sortRange[1];
+          const { topY, height } = selectedLines[i];
+
+          this.rangeOffscreenCtx.fillRect(
+            padding,
+            topY,
+            left - padding,
+            height,
+          );
+        } else {
+          // middle select line
+          const { topY, height, items } = selectedLines[i];
+          const width = items.reduce((a, b) => a + b.width, 0);
+
+          this.rangeOffscreenCtx.fillRect(padding, topY, width, height);
+        }
+      }
+    }
+
     this.findLineRangeBySelection();
 
     const { anchor, focus } = selection as Range;
@@ -559,9 +628,6 @@ export class SlateCanvas {
       return;
     }
 
-    this.rangeOffscreenCtx.globalAlpha = 0.5;
-    this.rangeOffscreenCtx.fillStyle = 'red';
-    this.rangeOffscreenCtx.fillRect(left, topY, 100, lineHeight);
     this.drawMainCanvas();
   }
 
@@ -600,7 +666,7 @@ export class SlateCanvas {
     const textY: number =
       (lineHeight - textHeight) / 2 + actualBoundingBoxAscent;
 
-    let splitLength: number;
+    let splitLengthAndWidth;
     if (this.isJustBreakLine) {
       // New line, so rendering from the beginning of the line.
       this.isJustBreakLine = false;
@@ -609,7 +675,11 @@ export class SlateCanvas {
 
       this.currentRenderingBaselineX = this.initialPosition.x;
 
-      splitLength = this.getSplitLength(contentWidth, width, text);
+      splitLengthAndWidth = this.getSplitLengthAndWidth(
+        contentWidth,
+        width,
+        text,
+      );
     } else {
       // Keep rendering on this line.
       this.currentLineMaxBaseLineY = Math.max(
@@ -620,8 +690,10 @@ export class SlateCanvas {
       const leftWidth =
         contentWidth -
         (this.currentRenderingBaselineX - this.initialPosition.x);
-      splitLength = this.getSplitLength(leftWidth, width, text);
+      splitLengthAndWidth = this.getSplitLengthAndWidth(leftWidth, width, text);
     }
+
+    const { splitLength, splitWidth } = splitLengthAndWidth;
 
     // record the baseLineY of the current line
     let baseLineY: number;
@@ -647,6 +719,7 @@ export class SlateCanvas {
           index,
           text: text.substring(0, splitLength),
           x: this.currentRenderingBaselineX,
+          width: splitWidth,
           realPath: [this.currentParagraph, this.currentParagraphSection],
         },
         info,
@@ -695,14 +768,21 @@ export class SlateCanvas {
    * @param width
    * @param text
    */
-  getSplitLength(contentWidth: number, width: number, text: string): number {
+  getSplitLengthAndWidth(
+    contentWidth: number,
+    width: number,
+    text: string,
+  ): {
+    splitWidth: number;
+    splitLength: number;
+  } {
     const textLength = text.length;
 
     if (width <= contentWidth) {
-      return textLength;
+      return { splitWidth: width, splitLength: textLength };
     }
 
-    let splitLength = 0; // one line text length;
+    let splitLength: number; // one line text length;
     const ratio = contentWidth / width;
     const aboutLength = Math.round(textLength * ratio);
 
@@ -731,7 +811,13 @@ export class SlateCanvas {
       }
       splitLength = i;
     }
-    return splitLength;
+    const { width: allWidth } = this.wordOffscreenCtx.measureText(
+      text.substring(0, splitLength),
+    );
+    return {
+      splitWidth: allWidth,
+      splitLength,
+    };
   }
 
   resetFont() {
@@ -804,6 +890,7 @@ export class SlateCanvas {
         fontHeight: actualBoundingBoxDescent + actualBoundingBoxAscent,
         ascentDescentRatio: actualBoundingBoxAscent / actualBoundingBoxDescent,
       };
+      return;
     }
 
     if (isCurrentSectionClickXAccurate) {
@@ -885,20 +972,6 @@ export class SlateCanvas {
     if (!selection) {
       return;
     }
-
-    // console.log('----------', 'selection', selection, '----------cyy log');
-    // const [point1, point2] = Editor.edges(this.editor, selection);
-    // const path1 = point1.path;
-    // const path2 = point2.path;
-    // const path1SuitableLines = this.lines
-    //   .map((l, index) => (Path.equals(path1, l.realPath) ? index : -1))
-    //   .filter((index) => index !== -1);
-    // console.log(
-    //   '----------',
-    //   'path1SuitableLines',
-    //   path1SuitableLines,
-    //   '----------cyy log',
-    // );
   }
 
   fillText(text: string) {}

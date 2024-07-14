@@ -19,6 +19,13 @@ export default defineComponent({
       {
         type: 'paragraph',
         children: [
+          { text: '生活就是个缓慢受锤的过程，', size: 30 },
+          { text: '人一天天老下去，奢望也一天天消逝，', bold: true },
+        ],
+      },
+      {
+        type: 'paragraph',
+        children: [
           {
             text: state.text1,
           },

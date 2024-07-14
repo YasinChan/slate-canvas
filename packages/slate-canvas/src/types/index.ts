@@ -19,6 +19,7 @@ export type TextItemType = {
   font?: string;
   fontSize?: number;
   x: number;
+  width: number;
   realPath: number[];
   index: number; // Since the canvas is rendered on a row-by-row basis,
   // the index at the beginning of the row that corresponds to this segment is recorded here.
