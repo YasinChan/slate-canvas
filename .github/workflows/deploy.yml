@@ -5,13 +5,20 @@ on:
     branches:
       - main  # 根据需要设置你的主分支
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  deploy-gh-pages:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          # 如果你文档需要 Git 子模块，取消注释下一行
+          # submodules: true
 
       - name: install pnpm
         uses: pnpm/action-setup@v2
@@ -20,7 +27,7 @@ jobs:
           version: 7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '18'  # 根据你的需要设置 Node.js 版本
           cache: 'pnpm'
