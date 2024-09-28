@@ -16,9 +16,17 @@
   padding: 0;
 }
 
-.compare {
+.slate-canvas {
+  margin: 0 auto;
+}
+
+.slate-canvas__item {
+  position: relative;
+}
+
+.slate-canvas__item-compare {
   word-break: break-all;
-  position: fixed;
+  position: absolute;
   z-index: 1;
   text-decoration: underline;
   top: 0;
@@ -29,6 +37,13 @@
   height: 500px;
   background-color: rgb(144, 150, 156);
   opacity: 0.8;
+}
+
+.slate-canvas__item-title {
+  position: absolute;
+  top: 5px;
+  left: 10px;
+  color: greenyellow;
 }
 
 canvas {

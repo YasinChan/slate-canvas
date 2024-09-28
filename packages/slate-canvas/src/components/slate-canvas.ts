@@ -1035,6 +1035,18 @@ export class SlateCanvas {
     this.ctx.drawImage(this.rangeOffscreenCanvas, 0, 0);
   }
 
+  setSlate(nodes: CustomDescendant[]) {
+    Transforms.select(this.editor, {
+      anchor: Editor.start(this.editor, []),
+      focus: Editor.end(this.editor, []),
+    });
+    setTimeout(() => {
+      // Editor.deleteBackward(this.editor);
+      // Editor.deleteFragment(this.editor, { direction: 'backward' });
+      Transforms.insertFragment(this.editor, nodes);
+    });
+  }
+
   getCanvasWrapper() {
     return this.canvasWrapper;
   }

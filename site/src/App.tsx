@@ -6,12 +6,10 @@ export default defineComponent({
   // 你好 Hello Привет Bonjour Ciao สวัสดี مرحبًا 안녕하세요 こんにちは.
   // Thai and Arabic are not supported at this time.
   setup() {
+    const scRef = ref();
     const cvs = ref<HTMLElement>();
     const cvs2 = ref<HTMLElement>();
     const state = reactive({
-      text1:
-        '那aaa안녕하세요一天我二十一岁，在我一生的黄金时代，我有asdfasdf好多奢望。我想爱，想吃，还想在一瞬间变成天上半明半暗的云，后来我才知道，',
-      text: '你好 Hello Привет Bonjour Ciao 안녕하세요 こんにちは',
       show: false,
     });
 
@@ -19,20 +17,20 @@ export default defineComponent({
       {
         type: 'paragraph',
         children: [
-          { text: '生活就是个缓慢受锤的过程，', size: 30 },
-          { text: '人一天天老下去，奢望也一天天消逝，', bold: true },
+          { text: '那一天我二十一岁，', size: 30 },
+          { text: '在我一生的黄金时代，我有好多奢望。', bold: true },
         ],
       },
       {
         type: 'paragraph',
         children: [
           {
-            text: state.text1,
+            text: '我想爱，想吃，',
           },
-          { text: '生活就是个缓慢受锤的过程，', size: 30 },
-          { text: '人一天天老下去，奢望也一天天消逝，', bold: true },
+          { text: '还想在一瞬间变成天上半明半暗的云，', size: 30 },
+          { text: '后来我才知道，生活就是个缓慢受锤的过程，', bold: true },
           {
-            text: '最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
+            text: '人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。',
           },
         ],
       },
@@ -40,18 +38,16 @@ export default defineComponent({
         type: 'paragraph',
         children: [
           {
-            text: 'asdf哈哈',
-          },
-          {
-            text: '哈哈asdfasdf',
-            size: 28,
-          },
-          {
-            text: '我觉得自己会永远生猛下去我觉得自己会永远生猛下去我觉得自己会永远生猛下去',
+            text: '可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
           },
         ],
       },
     ];
+
+    function setShow() {
+      scRef.value.setSlate(initialValue);
+      state.show = !state.show;
+    }
 
     onMounted(() => {
       const editor = withCanvas(createEditor());
@@ -73,6 +69,7 @@ export default defineComponent({
       const canvas = sc.getCanvas() as HTMLCanvasElement;
       canvas!.style.backgroundColor = 'rgb(184, 190, 196)';
       cvs.value?.appendChild(canvasWrapper);
+      scRef.value = sc;
 
       const editor2 = withCanvas(createEditor());
 
@@ -98,32 +95,54 @@ export default defineComponent({
     return {
       cvs,
       cvs2,
+      setShow,
       ...toRefs(state),
     };
   },
   render() {
     return (
-      <>
-        {this.show && (
-          <div class="compare">
-            {this.text1}
-            <span style="font-size: 30px">生活就是个缓慢受锤的过程，</span>
-            <span style="font-weight: bold">
-              人一天天老下去，奢望也一天天消逝，
-            </span>
-            最后变得像挨了锤的牛一样。可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
-            <p>
-              asdf哈哈<span style="font-size: 28px">哈哈asdfasdf</span>
-              我觉得自己会永远生猛下去我觉得自己会永远生猛下去我觉得自己会永远生猛下去
-            </p>
+      <div class="slate-canvas">
+        <h1>Slate Canvas</h1>
+        <p>
+          <b>Slate Canvas</b> is a rich text editor built on a canvas using
+          Slate.
+        </p>
+        <div style="display: flex;">
+          <div class="slate-canvas__item">
+            {this.show && (
+              <div class="slate-canvas__item-compare">
+                <div class="slate-canvas__item-title">Dom render context</div>
+                <span style="font-size: 30px">那一天我二十一岁，</span>
+                <span style="font-weight: bold">
+                  在我一生的黄金时代，我有好多奢望。
+                </span>
+                <p>
+                  我想爱，想吃，
+                  <span style="font-size: 30px">
+                    还想在一瞬间变成天上半明半暗的云，
+                  </span>
+                  <span style="font-weight: bold">
+                    后来我才知道，生活就是个缓慢受锤的过程，
+                  </span>
+                  人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。
+                </p>
+                <p>
+                  可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
+                </p>
+              </div>
+            )}
+            <div ref="cvs"></div>
           </div>
-        )}
-        <div ref="cvs"></div>
-        <div ref="cvs2"></div>
-        <button onClick={() => (this.show = !this.show)}>
-          {this.show ? 'hide' : 'show'} compare word
+          <div style="margin-left: 20px;" ref="cvs2"></div>
+        </div>
+        <button onClick={() => this.setShow()}>
+          {this.show ? 'hide' : 'show'} Click here to compare with dom render
+          context
         </button>
-      </>
+        <div>
+          <a href="https://github.com/YasinChan/slate-canvas">Github</a>
+        </div>
+      </div>
     );
   },
 });
