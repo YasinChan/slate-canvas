@@ -1,5 +1,5 @@
 import { ref, onMounted, defineComponent, reactive, toRefs } from 'vue';
-import { SlateCanvas, withCanvas, CustomDescendant } from 'slate-canvas';
+import { SlateCanvas, withCanvas } from 'slate-canvas';
 import { createEditor } from 'slate';
 
 export default defineComponent({
@@ -15,7 +15,7 @@ export default defineComponent({
       show: false,
     });
 
-    const initialValue: CustomDescendant[] = [
+    const initialValue: any[] = [
       {
         type: 'paragraph',
         children: [
