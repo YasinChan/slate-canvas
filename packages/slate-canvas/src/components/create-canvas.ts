@@ -14,7 +14,6 @@ export function createCanvas(
 ): CreateCanvasReturnType {
   const { width, height, styleWidth, styleHeight, fontSize } =
     handledCanvasOptions;
-
   const dpr = getDPR(editor);
 
   const canvasWrapper = document.createElement('div');
