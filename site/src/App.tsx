@@ -15,7 +15,7 @@ export default defineComponent({
       show: false,
     });
 
-    const initialValue: any[] = [
+    const initialValue = [
       {
         type: 'paragraph',
         children: [

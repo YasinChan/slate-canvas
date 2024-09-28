@@ -1,4 +1,3 @@
-import { Descendant } from 'slate';
 import { CustomDescendant } from '../types';
 
 export type setAccuracyCanvasOptionKeys =
