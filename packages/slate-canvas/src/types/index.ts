@@ -1,5 +1,6 @@
-import { Descendant } from 'slate';
+import { BaseText, Descendant } from 'slate';
 
+export type CustomDescendant = SlateCanvasElementType | SlateCanvasTextType;
 export type SlateCanvasElementType = {
   type: string;
   id?: string | number;

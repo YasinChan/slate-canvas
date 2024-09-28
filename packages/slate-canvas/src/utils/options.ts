@@ -1,4 +1,5 @@
 import { Descendant } from 'slate';
+import { CustomDescendant } from '../types';
 
 export type setAccuracyCanvasOptionKeys =
   | 'width'
@@ -32,7 +33,7 @@ export type CanvasOptionsType = setAccuracyCanvasOptions & {
 
 export interface OptionsType {
   canvasOptions: Partial<CanvasOptionsType>;
-  initialValue: Descendant[];
+  initialValue: CustomDescendant[];
 }
 
 export const defaultCanvasOptions: CanvasOptionsType = {

@@ -6,7 +6,6 @@ import {
   Scrubber,
   Transforms,
   BaseEditor,
-  Descendant,
   Range,
 } from 'slate';
 import {
@@ -31,10 +30,15 @@ import { IS_FOCUSED, IS_RANGING } from '../utils/weak-maps';
 
 import { KEY_CODE_ENUM } from '../config/key';
 
-import { TextItemType, LinesType, CursorLocationInfoType } from '../types';
+import {
+  TextItemType,
+  LinesType,
+  CursorLocationInfoType,
+  CustomDescendant,
+} from '../types';
 
 export class SlateCanvas {
-  public initialValue: Descendant[];
+  public initialValue: CustomDescendant[];
   private readonly canvasWrapper: HTMLDivElement;
   private readonly textarea: HTMLTextAreaElement;
   private readonly canvas: HTMLCanvasElement;
