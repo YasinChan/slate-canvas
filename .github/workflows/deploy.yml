@@ -26,7 +26,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --prefer-offline
+        run: pnpm install --frozen-lockfile
 
       - name: Build site
         run: pnpm build:site
