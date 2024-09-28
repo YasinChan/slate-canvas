@@ -8,7 +8,6 @@ import {
   BaseEditor,
   Descendant,
   Range,
-  BaseSetSelectionOperation,
 } from 'slate';
 import {
   createCanvas,
@@ -24,7 +23,6 @@ import {
   throttle,
   getDPR,
   deepClone,
-  findClosestIndex,
   OptionsType,
   CanvasOptionsType,
 } from '../utils';
@@ -34,7 +32,6 @@ import { IS_FOCUSED, IS_RANGING } from '../utils/weak-maps';
 import { KEY_CODE_ENUM } from '../config/key';
 
 import { TextItemType, LinesType, CursorLocationInfoType } from '../types';
-import { CanvasEditor } from '@/plugin/canvas-editor';
 
 export class SlateCanvas {
   public initialValue: Descendant[];
@@ -98,12 +95,15 @@ export class SlateCanvas {
   // when mousedown, record current point.
   private currentAnchor: Point | undefined = undefined;
 
+  private isComposing: boolean;
+
   constructor(
     public editor: BaseEditor,
     public options: OptionsType,
   ) {
     this.editor = editor;
     this.options = options;
+    this.isComposing = false;
 
     this.initialValue = options.initialValue;
 
@@ -204,7 +204,16 @@ export class SlateCanvas {
   }
 
   listen() {
-    document.body.addEventListener('keydown', (e: KeyboardEvent) => {
+    this.textarea.addEventListener('compositionstart', (inputEvent: Event) => {
+      // const e = inputEvent as InputEvent;
+      this.isComposing = true;
+    });
+    this.textarea.addEventListener('compositionend', (inputEvent: Event) => {
+      const e = inputEvent as InputEvent;
+      this.isComposing = false;
+      Editor.insertText(this.editor, e.data ? e.data : '');
+    });
+    this.textarea.addEventListener('keydown', (e: KeyboardEvent) => {
       const isFocus = IS_FOCUSED.get(this.editor);
       if (!isFocus) {
         return;
@@ -217,10 +226,20 @@ export class SlateCanvas {
         Transforms.collapse(this.editor, { edge: 'focus' });
         Transforms.move(this.editor, { distance: 1, reverse: false });
       }
+      if (e.code === KEY_CODE_ENUM['BACKSPACE']) {
+        Editor.deleteBackward(this.editor);
+      }
     });
 
     this.textarea.addEventListener('blur', () => {
       IS_FOCUSED.delete(this.editor);
+    });
+    this.textarea.addEventListener('input', (inputEvent: Event) => {
+      if (this.isComposing) {
+        return;
+      }
+      const e = inputEvent as InputEvent;
+      Editor.insertText(this.editor, e.data ? e.data : '');
     });
 
     this.canvas.addEventListener('mousedown', (e: MouseEvent) => {
@@ -323,6 +342,16 @@ export class SlateCanvas {
   }
 
   render() {
+    if (this.isComposing) {
+      return;
+    }
+    this.clearWordCanvas();
+    this.lines = [];
+    this.currentRenderingBaselineX = 0;
+    this.currentLineMaxBaseLineY = 0;
+    this.currentLineIndex = -1;
+    this.currentParagraph = -1;
+    this.currentParagraphSection = -1;
     const paddingTop =
       this.handledCanvasOptions.paddingTop ||
       this.handledCanvasOptions.padding ||
@@ -341,7 +370,7 @@ export class SlateCanvas {
       height: this.handledCanvasOptions.height - paddingTop * 2,
     };
 
-    this.initialValue.forEach((item) => {
+    this.editor.children.forEach((item) => {
       this.resetFont();
       this.currentLineIndex++;
       this.currentParagraph++;
@@ -413,16 +442,23 @@ export class SlateCanvas {
       if (!operation) {
         return;
       }
-
       switch (operation.type) {
         case 'set_selection':
-          this.setSelection(operation);
+          this.setSelection();
+          break;
+        case 'insert_text':
+        case 'remove_text':
+          this.setText(operation);
+          this.setSelection();
           break;
       }
     };
   }
 
-  setSelection(operation: BaseSetSelectionOperation) {
+  setSelection() {
+    if (this.isComposing) {
+      return;
+    }
     const selection = this.editor.selection;
 
     if (!(selection && selection.focus)) {
@@ -510,6 +546,12 @@ export class SlateCanvas {
       }
     }
   }
+  setText(operation: any) {
+    if (!operation.text) {
+      return;
+    }
+    this.render();
+  }
 
   drawTextarea(
     currentItem: TextItemType | undefined,
@@ -547,10 +589,16 @@ export class SlateCanvas {
     }
   }
 
+  clearWordCanvas() {
+    const { width, height } = this.wordOffscreenCanvas;
+    this.wordOffscreenCtx.clearRect(0, 0, width, height);
+  }
+
   clearRangeRect() {
     const { width, height } = this.rangeOffscreenCanvas;
     this.rangeOffscreenCtx.clearRect(0, 0, width, height);
   }
+
   drawRange() {
     const { selection } = this.editor;
     if (!selection) {
