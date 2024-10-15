@@ -5,7 +5,7 @@ You can try it [here](https://git.yasinchan.com/slate-canvas/).
 
 ## Usage
 ```bash
-pnpm install slate-canvas
+pnpm install slate slate-canvas
 ```
 
 ```html
