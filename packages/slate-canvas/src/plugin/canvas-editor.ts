@@ -21,11 +21,9 @@ export const CanvasEditor: CanvasEditorInterface = {
     if (IS_FOCUSED.get(editor)) {
       return;
     }
-    console.log('----------', 'focus', 1, '----------cyy log');
     IS_FOCUSED.set(editor, true);
   },
   blur(editor: CanvasEditor) {
-    console.log('----------', 'blur', 1, '----------cyy log');
     IS_FOCUSED.set(editor, false);
   },
 };

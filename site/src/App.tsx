@@ -1,6 +1,6 @@
 import { ref, onMounted, defineComponent, reactive, toRefs } from 'vue';
 import { SlateCanvas, withCanvas } from 'slate-canvas';
-import { createEditor } from 'slate';
+import { createEditor, Operation } from 'slate';
 
 export default defineComponent({
   // 你好 Hello Привет Bonjour Ciao สวัสดี مرحبًا 안녕하세요 こんにちは.
@@ -44,16 +44,25 @@ export default defineComponent({
       },
     ];
 
+    // @ts-ignore
+    window.initialValue = initialValue;
+
     function setShow() {
       scRef.value.setSlate(initialValue);
       state.show = !state.show;
     }
 
     onMounted(() => {
+      console.log('%cHi, you can try slate-canvas in the console!', 'color: rgb(0,217,197); font-size: 16px;');
+
+      console.log('You can use %csc.on("change", (o) => { console.log("change", o); }) %cto listen for changes in the editor.', 'color: rgb(161, 194, 129);', '')
+      console.log('Try %ceditor.children %chere to get slate children.', 'color: rgb(161, 194, 129)', '')
+      console.log('Then you can use %csc.setSlate(change then editor.children you get below) %chere to change the editor.', 'color: rgb(161, 194, 129);', '')
+
       const editor = withCanvas(createEditor());
 
-      // @ts-ignore
-      window.editor = editor;
+      // // @ts-ignore
+      // window.editor = editor;
 
       const sc = new SlateCanvas(editor, {
         canvasOptions: {
@@ -74,7 +83,7 @@ export default defineComponent({
       const editor2 = withCanvas(createEditor());
 
       // @ts-ignore
-      window.editor2 = editor2;
+      window.editor = editor2;
 
       const sc2 = new SlateCanvas(editor2, {
         canvasOptions: {
@@ -86,6 +95,10 @@ export default defineComponent({
         },
         initialValue: initialValue,
       });
+
+      // @ts-ignore
+      window.sc = sc2;
+
       const canvasWrapper2 = sc2.getCanvasWrapper() as HTMLDivElement;
       const canvas2 = sc2.getCanvas() as HTMLCanvasElement;
       canvas2!.style.backgroundColor = 'rgb(184, 190, 196)';
@@ -103,10 +116,24 @@ export default defineComponent({
     return (
       <div class="slate-canvas">
         <h1>Slate Canvas</h1>
+        <div>
+          <a href="https://github.com/YasinChan/slate-canvas">Github</a>
+        </div>
         <p>
           <b>Slate Canvas</b> is a rich text editor built on a canvas using
           Slate.
         </p>
+        <div style="margin-bottom: 40px;">
+          <h1>Let's try!</h1>
+          <div ref="cvs2"></div>
+          <p>You can try the input and select operations here, of course, you can also open the console to execute commands to control the editor above!</p>
+        </div>
+
+        <h1>Let's compare!</h1>
+        <button onClick={() => this.setShow()}>
+          {this.show ? 'hide' : 'show'} Click here to compare with dom render
+          context
+        </button>
         <div style="display: flex;">
           <div class="slate-canvas__item">
             {this.show && (
@@ -133,14 +160,6 @@ export default defineComponent({
             )}
             <div ref="cvs"></div>
           </div>
-          <div style="margin-left: 20px;" ref="cvs2"></div>
-        </div>
-        <button onClick={() => this.setShow()}>
-          {this.show ? 'hide' : 'show'} Click here to compare with dom render
-          context
-        </button>
-        <div>
-          <a href="https://github.com/YasinChan/slate-canvas">Github</a>
         </div>
       </div>
     );
