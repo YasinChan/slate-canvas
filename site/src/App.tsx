@@ -1,6 +1,6 @@
 import { ref, onMounted, defineComponent, reactive, toRefs } from 'vue';
 import { SlateCanvas, withCanvas } from 'slate-canvas';
-import { createEditor, Operation } from 'slate';
+import { createEditor } from 'slate';
 
 export default defineComponent({
   // 你好 Hello Привет Bonjour Ciao สวัสดี مرحبًا 안녕하세요 こんにちは.
