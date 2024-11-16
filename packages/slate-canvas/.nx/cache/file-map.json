@@ -1,0 +1,93 @@
+{
+  "version": "6.0",
+  "nxVersion": "19.0.6",
+  "deps": {
+    "mitt": "^3.0.1",
+    "slate": "^0.103.0",
+    "@rollup/plugin-alias": "^5.1.0",
+    "@rollup/plugin-commonjs": "^25.0.8",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^4.18.0",
+    "rollup-plugin-typescript2": "^0.36.0"
+  },
+  "pathMappings": {
+    "@/*": [
+      "src/*"
+    ]
+  },
+  "nxJsonPlugins": [],
+  "fileMap": {
+    "projectFileMap": {},
+    "nonProjectFiles": [
+      {
+        "file": "README.md",
+        "hash": "11702769929901062481"
+      },
+      {
+        "file": "costom-types.ts",
+        "hash": "17031624789226379841"
+      },
+      {
+        "file": "package.json",
+        "hash": "11906993223897747214"
+      },
+      {
+        "file": "rollup.config.js",
+        "hash": "3527118616262823914"
+      },
+      {
+        "file": "src/components/create-canvas.ts",
+        "hash": "14035923106404781878"
+      },
+      {
+        "file": "src/components/on-change.ts",
+        "hash": "8413962373497551507"
+      },
+      {
+        "file": "src/components/slate-canvas.ts",
+        "hash": "11577385704740470897"
+      },
+      {
+        "file": "src/config/emitterMap.ts",
+        "hash": "416471092227113080"
+      },
+      {
+        "file": "src/config/key.ts",
+        "hash": "11835988125260348810"
+      },
+      {
+        "file": "src/index.ts",
+        "hash": "4539751706488940471"
+      },
+      {
+        "file": "src/plugin/canvas-editor.ts",
+        "hash": "5184856860838382642"
+      },
+      {
+        "file": "src/plugin/with-canvas.ts",
+        "hash": "5942264517997843203"
+      },
+      {
+        "file": "src/types/index.ts",
+        "hash": "17386663756889968005"
+      },
+      {
+        "file": "src/utils/index.ts",
+        "hash": "3213819391740099749"
+      },
+      {
+        "file": "src/utils/options.ts",
+        "hash": "11296295867572067873"
+      },
+      {
+        "file": "src/utils/weak-maps.ts",
+        "hash": "16114427157109762716"
+      },
+      {
+        "file": "tsconfig.json",
+        "hash": "10503754493477181145"
+      }
+    ]
+  }
+}

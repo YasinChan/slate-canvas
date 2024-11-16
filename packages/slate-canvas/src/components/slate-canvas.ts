@@ -13,6 +13,8 @@ import {
   createOffscreenCanvas,
 } from '../components/create-canvas';
 
+import mitt, { Emitter, EventType } from 'mitt';
+
 import {
   setAccuracy,
   defaultCanvasOptions,
@@ -29,6 +31,7 @@ import {
 import { IS_FOCUSED, IS_RANGING } from '../utils/weak-maps';
 
 import { KEY_CODE_ENUM } from '../config/key';
+import emitterMap from '../config/emitterMap';
 
 import {
   TextItemType,
@@ -38,6 +41,7 @@ import {
 } from '../types';
 
 export class SlateCanvas {
+  private readonly emitter: Emitter<Record<EventType, unknown>>;
   public initialValue: CustomDescendant[];
   private readonly canvasWrapper: HTMLDivElement;
   private readonly textarea: HTMLTextAreaElement;
@@ -105,6 +109,8 @@ export class SlateCanvas {
     public editor: BaseEditor,
     public options: OptionsType,
   ) {
+    this.emitter = mitt();
+
     this.editor = editor;
     this.options = options;
     this.isComposing = false;
@@ -205,6 +211,10 @@ export class SlateCanvas {
   init() {
     this.render();
     this.onChange();
+  }
+
+  on(type: string, handler: (...args: any[]) => void) {
+    this.emitter.on(type, handler);
   }
 
   listen() {
@@ -410,8 +420,6 @@ export class SlateCanvas {
       }
     });
 
-    console.log('----------', 'this.lines', this.lines, '----------cyy log');
-
     this.lines.forEach((line) => {
       line.items.forEach((lineItem: any) => {
         this.resetFont();
@@ -456,6 +464,8 @@ export class SlateCanvas {
           this.setSelection();
           break;
       }
+
+      this.emitter.emit(emitterMap.ON_CHANGE, o.operation);
     };
   }
 
@@ -1057,5 +1067,9 @@ export class SlateCanvas {
 
   getCtx() {
     return this.ctx;
+  }
+
+  getLinesInfo() {
+    return this.lines;
   }
 }
