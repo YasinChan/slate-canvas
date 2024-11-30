@@ -126,7 +126,7 @@ export default defineComponent({
         <div style="margin-bottom: 40px;">
           <h1>Let's try!</h1>
           <div ref="cvs2"></div>
-          <p>You can try the input and select operations here, of course, you can also open the console to execute commands to control the editor above!</p>
+          <p>You can try the input and select operations here, of course, you can also <strong>open the console</strong> to execute commands to control the editor above!</p>
         </div>
 
         <h1>Let's compare!</h1>
