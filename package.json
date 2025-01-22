@@ -5,21 +5,22 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:site": "cd site && pnpm build"
+    "build": "turbo run build --parallel",
+    "dev": "turbo run dev --parallel"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {},
   "devDependencies": {
+    "@types/node": "^20.12.12",
     "@typescript-eslint/eslint-plugin": "^7.10.0",
     "@typescript-eslint/parser": "^7.10.0",
-    "@types/node": "^20.12.12",
     "eslint": "^9.3.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
     "prettier": "^3.2.5",
-    "lerna": "^8.1.3",
+    "turbo": "^2.3.3",
     "typescript": "^5.4.5"
-  }
+  },
+  "packageManager": "pnpm@8.0.0"
 }
