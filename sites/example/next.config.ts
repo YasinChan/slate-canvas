@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   basePath: '/slate-canvas',
+  assetPrefix: '/slate-canvas/',
 };
 
 export default nextConfig;
