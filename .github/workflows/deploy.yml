@@ -28,7 +28,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: pnpm build:example
         env:
           NODE_OPTIONS: --max_old_space_size=4096
 
