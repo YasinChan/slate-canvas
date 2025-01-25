@@ -42,4 +42,4 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
           branch: gh-pages
-          folder: sites/example/out
+          folder: sites/example/dist

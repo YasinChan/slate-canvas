@@ -2,12 +2,17 @@ import { useRef, useState, useEffect } from "react";
 import { SlateCanvas, withCanvas } from 'slate-canvas';
 import { createEditor } from 'slate';
 
-export default function Index() {
+export default function App() {
   const cvs = useRef<HTMLDivElement>(null);
   const cvs2 = useRef<HTMLDivElement>(null);
   const [show, setShow] = useState(false);
-
+  console.log('cvs', cvs);
   useEffect(() => {
+    // 防止重复创建
+    if (cvs.current?.hasChildNodes() || cvs2.current?.hasChildNodes()) {
+      return;
+    }
+    
     const initialValue = [
       {
         type: 'paragraph',
@@ -91,26 +96,26 @@ export default function Index() {
 
   return (
     <div className="slate-canvas">
-      <div className="text-3xl font-bold">Slate Canvas</div>
+      <h1>Slate Canvas</h1>
       <div>
-        <a className="text-blue-500" href="https://github.com/YasinChan/slate-canvas">Github</a>
+        <a href="https://github.com/YasinChan/slate-canvas">Github</a>
       </div>
       <p>
         <b>Slate Canvas</b> is a rich text editor built on a canvas using
         Slate.
       </p>
       <div style={{ marginBottom: 40 }}>
-        <div className="text-2xl font-bold">Let&apos;s try!</div>
+        <h1>Let&apos;s try!</h1>
         <div ref={cvs2}></div>
         <p>You can try the input and select operations here, of course, you can also <strong style={{ color: "#00D9C5" }}>open the console</strong> to execute commands to control the editor above!</p>
       </div>
 
-      <div className="text-2xl font-bold">Let&apos;s compare!</div>
+      <h1>Let&apos;s compare!</h1>
       <button onClick={() => setShow(!show)}>
         {show ? 'hide' : 'show'} Click here to compare with dom render
         context
       </button>
-      <div className="flex">
+      <div style={{ display: 'flex' }}>
         <div className="slate-canvas__item">
           {show && (
             <div className="slate-canvas__item-compare">
