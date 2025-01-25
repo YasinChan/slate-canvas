@@ -3,39 +3,43 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # 或者你的默认分支名称
-  workflow_dispatch:  # 允许手动触发
+      - main  # 根据需要设置你的主分支
+
+permissions:
+  contents: write
 
 jobs:
-  build-and-deploy:
+  deploy-gh-pages:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
         with:
-          node-version: '18'
+          fetch-depth: 0
+          # 如果你文档需要 Git 子模块，取消注释下一行
+          # submodules: true
 
-      - name: Setup pnpm
+      - name: install pnpm
         uses: pnpm/action-setup@v2
         with:
+          run_install: true
           version: 8
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # 根据你的需要设置 Node.js 版本
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Build site
         run: pnpm build:example
-        env:
-          NODE_OPTIONS: --max_old_space_size=4096
 
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Deploy documentation
+        uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
-          folder: sites/example/out  # 指定要部署的文件夹路径
-          branch: gh-pages  # 部署到的目标分支
-          clean: true  # 在部署之前清理目标分支
-          
+          branch: gh-pages
+          folder: sites/example/out
