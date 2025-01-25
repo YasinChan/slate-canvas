@@ -1,114 +1,142 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import { useRef, useState, useEffect } from "react";
+import { SlateCanvas, withCanvas } from 'slate-canvas';
+import { createEditor } from 'slate';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+export default function Index() {
+  const cvs = useRef<HTMLDivElement>(null);
+  const cvs2 = useRef<HTMLDivElement>(null);
+  const [show, setShow] = useState(false);
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  useEffect(() => {
+    const initialValue = [
+      {
+        type: 'paragraph',
+        children: [
+          { text: '那一天我二十一岁，', size: 30 },
+          { text: '在我一生的黄金时代，我有好多奢望。', bold: true },
+        ],
+      },
+      {
+        type: 'paragraph',
+        children: [
+          {
+            text: '我想爱，想吃，',
+          },
+          { text: '还想在一瞬间变成天上半明半暗的云，', size: 30 },
+          { text: '后来我才知道，生活就是个缓慢受锤的过程，', bold: true },
+          {
+            text: '人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。',
+          },
+        ],
+      },
+      {
+        type: 'paragraph',
+        children: [
+          {
+            text: '可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。',
+          },
+        ],
+      },
+    ];
+    // @ts-expect-error disable ts
+    window.initialValue = initialValue;
 
-export default function Home() {
+    console.log('%cHi, you can try slate-canvas in the console!', 'color: rgb(0,217,197); font-size: 16px;');
+
+    console.log('You can use %csc.on("change", (o) => { console.log("change", o); }) %cto listen for changes in the editor.', 'color: rgb(161, 194, 129);', '')
+    console.log('Try %ceditor.children %chere to get slate children.', 'color: rgb(161, 194, 129)', '')
+    console.log('Then you can use %csc.setSlate(change then editor.children you get below) %chere to change the editor.', 'color: rgb(161, 194, 129);', '')
+
+    const editor = withCanvas(createEditor());
+
+    const sc = new SlateCanvas(editor, {
+      canvasOptions: {
+        width: 500,
+        height: 500,
+        accuracy: 1,
+        lineHeight: 2.5,
+        padding: 20,
+      },
+      initialValue: initialValue,
+    });
+    const canvasWrapper = sc.getCanvasWrapper() as HTMLDivElement;
+    const canvas = sc.getCanvas() as HTMLCanvasElement;
+    canvas!.style.backgroundColor = 'rgb(184, 190, 196)';
+    cvs.current?.appendChild(canvasWrapper);
+
+    const editor2 = withCanvas(createEditor());
+
+    // @ts-expect-error disable ts
+    window.editor = editor2;
+
+    const sc2 = new SlateCanvas(editor2, {
+      canvasOptions: {
+        width: 500,
+        height: 500,
+        accuracy: 1,
+        lineHeight: 2.5,
+        padding: 20,
+      },
+      initialValue: initialValue,
+    });
+
+    // @ts-expect-error disable ts
+    window.sc = sc2;
+
+    const canvasWrapper2 = sc2.getCanvasWrapper() as HTMLDivElement;
+    const canvas2 = sc2.getCanvas() as HTMLCanvasElement;
+    canvas2!.style.backgroundColor = 'rgb(184, 190, 196)';
+    cvs2.current?.appendChild(canvasWrapper2);
+  }, []);
+
   return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="slate-canvas">
+      <div className="text-3xl font-bold">Slate Canvas</div>
+      <div>
+        <a className="text-blue-500" href="https://github.com/YasinChan/slate-canvas">Github</a>
+      </div>
+      <p>
+        <b>Slate Canvas</b> is a rich text editor built on a canvas using
+        Slate.
+      </p>
+      <div style={{ marginBottom: 40 }}>
+        <div className="text-2xl font-bold">Let&apos;s try!</div>
+        <div ref={cvs2}></div>
+        <p>You can try the input and select operations here, of course, you can also <strong style={{ color: "#00D9C5" }}>open the console</strong> to execute commands to control the editor above!</p>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <div className="text-2xl font-bold">Let&apos;s compare!</div>
+      <button onClick={() => setShow(!show)}>
+        {show ? 'hide' : 'show'} Click here to compare with dom render
+        context
+      </button>
+      <div className="flex">
+        <div className="slate-canvas__item">
+          {show && (
+            <div className="slate-canvas__item-compare">
+              <div className="slate-canvas__item-title">Dom render context</div>
+              <span style={{ fontSize: "30px" }}>那一天我二十一岁，</span>
+              <span style={{ fontWeight: "bold" }}>
+                在我一生的黄金时代，我有好多奢望。
+              </span>
+              <p>
+                我想爱，想吃，
+                <span style={{ fontSize: "30px" }}>
+                  还想在一瞬间变成天上半明半暗的云，
+                </span>
+                <span style={{ fontWeight: "bold" }}>
+                  后来我才知道，生活就是个缓慢受锤的过程，
+                </span>
+                人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。
+              </p>
+              <p>
+                可是我过二十一岁生日时没有预见到这一点。我觉得自己会永远生猛下去，什么也锤不了我。
+              </p>
+            </div>
+          )}
+          <div ref={cvs}></div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }

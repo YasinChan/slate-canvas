@@ -12,6 +12,7 @@
     "next": "15.1.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "slate": "^0.103.0",
     "slate-canvas": "workspace:^"
   },
   "devDependencies": {

@@ -103,6 +103,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.0.0(react@19.0.0)
+      slate:
+        specifier: ^0.103.0
+        version: 0.103.0
       slate-canvas:
         specifier: workspace:^
         version: link:../../packages/slate-canvas
