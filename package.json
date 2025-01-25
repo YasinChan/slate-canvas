@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "turbo run build --parallel",
-    "dev": "turbo run dev --parallel",
-    "build:example": "turbo run build --parallel --filter=!sites/* && turbo run build --filter=sites/*",
-    "dev:example": "turbo run build --parallel --filter=!sites/* && turbo run dev --filter=sites/*"
+    "build": "turbo run build --parallel --filter=!example",
+    "dev": "turbo run dev --parallel --filter=!example",
+    "build:example": "turbo run build --parallel --filter=!example && turbo run build --filter=example",
+    "dev:example": "turbo run build --parallel --filter=!example && turbo run dev --parallel"
   },
   "keywords": [],
   "author": "",
