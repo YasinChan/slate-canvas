@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "turbo run build --parallel",
-    "dev": "turbo run dev --parallel"
+    "dev": "turbo run dev --parallel",
+    "build:example": "turbo run build --parallel --filter=!sites/* && turbo run build --filter=sites/*",
+    "dev:example": "turbo run build --parallel --filter=!sites/* && turbo run dev --filter=sites/*"
   },
   "keywords": [],
   "author": "",
