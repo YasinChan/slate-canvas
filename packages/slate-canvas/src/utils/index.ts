@@ -61,6 +61,12 @@ export function initCreateFontValue(
   return `${fontStyleDefault} ${fontVariantDefault} ${fontWeightDefault} ${fontSizeDefault}px/${lineHeightDefault} ${fontFamilyDefault}`;
 }
 
+/**
+ * create canvas font value
+ * @param editor CanvasEditor
+ * @param options Partial<CanvasOptionsType>
+ * @returns string
+ */
 export function createFontValue(
   editor: CanvasEditor,
   options: Partial<CanvasOptionsType>,

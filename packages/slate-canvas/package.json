@@ -43,7 +43,8 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
     "rollup": "^4.18.0",
-    "rollup-plugin-typescript2": "^0.36.0"
+    "rollup-plugin-typescript2": "^0.36.0",
+    "tslib": "^2.8.1"
   },
   "gitHead": "13a43d93e54a9f72aebb684ffdc4fa9bd17e787e"
 }

@@ -1,6 +1,12 @@
 import { useRef, useState, useEffect } from "react";
-import { SlateCanvas, withCanvas } from 'slate-canvas';
+import SlateCanvas, { withCanvas, ComponentBase } from 'slate-canvas';
 import { createEditor } from 'slate';
+
+class BoldComponent extends ComponentBase {
+  public readonly type = 'bold';
+}
+
+console.log('BoldComponent', BoldComponent);
 
 export default function App() {
   const cvs = useRef<HTMLDivElement>(null);
@@ -62,6 +68,9 @@ export default function App() {
         lineHeight: 2.5,
         padding: 20,
       },
+      components: [
+        new BoldComponent(),
+      ],
       initialValue: initialValue,
     });
     const canvasWrapper = sc.getCanvasWrapper() as HTMLDivElement;

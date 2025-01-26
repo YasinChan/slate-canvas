@@ -38,3 +38,7 @@ export type CursorLocationInfoType = {
   fontHeight: number;
   ascentDescentRatio: number;
 };
+
+export type PluginProviders = {
+  test: string;
+};
