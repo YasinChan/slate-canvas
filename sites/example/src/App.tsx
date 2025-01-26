@@ -1,12 +1,7 @@
-import { useRef, useState, useEffect } from "react";
-import SlateCanvas, { withCanvas, ComponentBase } from 'slate-canvas';
+import { useRef, useState, useEffect } from 'react';
+import { withCanvas } from 'slate-canvas';
 import { createEditor } from 'slate';
-
-class BoldComponent extends ComponentBase {
-  public readonly type = 'bold';
-}
-
-console.log('BoldComponent', BoldComponent);
+import { MySlateCanvas } from './my-slate-canvas';
 
 export default function App() {
   const cvs = useRef<HTMLDivElement>(null);
@@ -18,7 +13,7 @@ export default function App() {
     if (cvs.current?.hasChildNodes() || cvs2.current?.hasChildNodes()) {
       return;
     }
-    
+
     const initialValue = [
       {
         type: 'paragraph',
@@ -52,15 +47,30 @@ export default function App() {
     // @ts-expect-error disable ts
     window.initialValue = initialValue;
 
-    console.log('%cHi, you can try slate-canvas in the console!', 'color: rgb(0,217,197); font-size: 16px;');
+    console.log(
+      '%cHi, you can try slate-canvas in the console!',
+      'color: rgb(0,217,197); font-size: 16px;',
+    );
 
-    console.log('You can use %csc.on("change", (o) => { console.log("change", o); }) %cto listen for changes in the editor.', 'color: rgb(161, 194, 129);', '')
-    console.log('Try %ceditor.children %chere to get slate children.', 'color: rgb(161, 194, 129)', '')
-    console.log('Then you can use %csc.setSlate(change then editor.children you get below) %chere to change the editor.', 'color: rgb(161, 194, 129);', '')
+    console.log(
+      'You can use %csc.on("change", (o) => { console.log("change", o); }) %cto listen for changes in the editor.',
+      'color: rgb(161, 194, 129);',
+      '',
+    );
+    console.log(
+      'Try %ceditor.children %chere to get slate children.',
+      'color: rgb(161, 194, 129)',
+      '',
+    );
+    console.log(
+      'Then you can use %csc.setSlate(change then editor.children you get below) %chere to change the editor.',
+      'color: rgb(161, 194, 129);',
+      '',
+    );
 
     const editor = withCanvas(createEditor());
 
-    const sc = new SlateCanvas(editor, {
+    const sc = new MySlateCanvas(editor, {
       canvasOptions: {
         width: 500,
         height: 500,
@@ -68,9 +78,6 @@ export default function App() {
         lineHeight: 2.5,
         padding: 20,
       },
-      components: [
-        new BoldComponent(),
-      ],
       initialValue: initialValue,
     });
     const canvasWrapper = sc.getCanvasWrapper() as HTMLDivElement;
@@ -83,7 +90,7 @@ export default function App() {
     // @ts-expect-error disable ts
     window.editor = editor2;
 
-    const sc2 = new SlateCanvas(editor2, {
+    const sc2 = new MySlateCanvas(editor2, {
       canvasOptions: {
         width: 500,
         height: 500,
@@ -110,35 +117,37 @@ export default function App() {
         <a href="https://github.com/YasinChan/slate-canvas">Github</a>
       </div>
       <p>
-        <b>Slate Canvas</b> is a rich text editor built on a canvas using
-        Slate.
+        <b>Slate Canvas</b> is a rich text editor built on a canvas using Slate.
       </p>
       <div style={{ marginBottom: 40 }}>
         <h1>Let&apos;s try!</h1>
         <div ref={cvs2}></div>
-        <p>You can try the input and select operations here, of course, you can also <strong style={{ color: "#00D9C5" }}>open the console</strong> to execute commands to control the editor above!</p>
+        <p>
+          You can try the input and select operations here, of course, you can
+          also <strong style={{ color: '#00D9C5' }}>open the console</strong> to
+          execute commands to control the editor above!
+        </p>
       </div>
 
       <h1>Let&apos;s compare!</h1>
       <button onClick={() => setShow(!show)}>
-        {show ? 'hide' : 'show'} Click here to compare with dom render
-        context
+        {show ? 'hide' : 'show'} Click here to compare with dom render context
       </button>
       <div style={{ display: 'flex' }}>
         <div className="slate-canvas__item">
           {show && (
             <div className="slate-canvas__item-compare">
               <div className="slate-canvas__item-title">Dom render context</div>
-              <span style={{ fontSize: "30px" }}>那一天我二十一岁，</span>
-              <span style={{ fontWeight: "bold" }}>
+              <span style={{ fontSize: '30px' }}>那一天我二十一岁，</span>
+              <span style={{ fontWeight: 'bold' }}>
                 在我一生的黄金时代，我有好多奢望。
               </span>
               <p>
                 我想爱，想吃，
-                <span style={{ fontSize: "30px" }}>
+                <span style={{ fontSize: '30px' }}>
                   还想在一瞬间变成天上半明半暗的云，
                 </span>
-                <span style={{ fontWeight: "bold" }}>
+                <span style={{ fontWeight: 'bold' }}>
                   后来我才知道，生活就是个缓慢受锤的过程，
                 </span>
                 人一天天老下去，奢望也一天天消逝，最后变得像挨了锤的牛一样。

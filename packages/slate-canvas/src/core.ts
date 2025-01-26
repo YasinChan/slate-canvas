@@ -7,11 +7,14 @@ import {
   Transforms,
   BaseEditor,
   Range,
+  type Descendant,
 } from 'slate';
 import {
   createCanvas,
   createOffscreenCanvas,
 } from '@/components/create-canvas';
+
+import { cloneDeep } from 'es-toolkit';
 
 import mitt, { Emitter, EventType } from 'mitt';
 
@@ -33,15 +36,11 @@ import { IS_FOCUSED, IS_RANGING } from '@/utils/weak-maps';
 import { KEY_CODE_ENUM } from '@/config/key';
 import emitterMap from '@/config/emitterMap';
 
-import {
-  TextItemType,
-  LinesType,
-  CursorLocationInfoType,
-  CustomDescendant,
-} from '@/types';
-
+import { TextItemType, LinesType, CursorLocationInfoType } from '@/types';
+import { FontBase } from '@/abstracts';
 export default class SlateCanvas {
-  public initialValue: CustomDescendant[];
+  public initialValue: Descendant[];
+  #FontComponents: Record<string, FontBase> = {};
   #emitter: Emitter<Record<EventType, unknown>>;
   #canvasWrapper: HTMLDivElement;
   #textarea: HTMLTextAreaElement;
@@ -60,8 +59,7 @@ export default class SlateCanvas {
   #rangeOffscreenCtx: CanvasRenderingContext2D;
 
   // Converts the values in `canvasOptions` in `options` by precision.
-  #handledCanvasOptions: CanvasOptionsType =
-    deepClone(defaultCanvasOptions);
+  #handledCanvasOptions: CanvasOptionsType = deepClone(defaultCanvasOptions);
   // The position at which to initially start rendering the content
   #initialPosition: { x: number; y: number } = { x: 0, y: 0 };
   // Minus padding content size
@@ -108,6 +106,7 @@ export default class SlateCanvas {
   constructor(
     public editor: BaseEditor,
     public options: OptionsType,
+    public components: FontBase[],
   ) {
     this.#emitter = mitt();
 
@@ -116,6 +115,13 @@ export default class SlateCanvas {
     this.#isComposing = false;
 
     this.initialValue = options.initialValue;
+
+    (components || []).forEach((component) => {
+      if (component.type === 'font') {
+        component.initialize({ test: 'test' });
+        this.#FontComponents[component.id] = component;
+      }
+    });
 
     this.selectionRange = {
       start: undefined,
@@ -396,14 +402,17 @@ export default class SlateCanvas {
           this.#currentParagraphSection++;
 
           let fontSize = this.#handledCanvasOptions.fontSize;
-          const fontObj: Partial<CanvasOptionsType> = {};
-          if ('bold' in child) {
-            fontObj['fontWeight'] = 'bold';
-          }
-          if ('size' in child) {
-            fontSize = setAccuracy(this.editor, child.size as number);
-            fontObj['fontSize'] = fontSize;
-          }
+          let fontObj: Partial<CanvasOptionsType> = {};
+          Object.keys(child).forEach((key) => {
+            if (this.#FontComponents[key]) {
+              fontObj = this.#FontComponents[key].render(
+                this.editor,
+                cloneDeep(fontObj),
+                child,
+              );
+            }
+          });
+
           let font = '';
           if (Object.keys(fontObj)?.length) {
             font = createFontValue(this.editor, fontObj);
@@ -411,7 +420,7 @@ export default class SlateCanvas {
 
           if ('text' in child) {
             const info: { font?: string; fontSize: number } = {
-              fontSize: fontSize,
+              fontSize: fontObj['fontSize'] || fontSize,
             };
             font && (info['font'] = font);
             this.calculateLines(child.text, info);
@@ -767,7 +776,9 @@ export default class SlateCanvas {
         lastLine.topY + lastLine.height + this.#currentLineMaxBaseLineY;
     }
 
-    this.#lines[this.#currentLineIndex] = this.#lines[this.#currentLineIndex] || {
+    this.#lines[this.#currentLineIndex] = this.#lines[
+      this.#currentLineIndex
+    ] || {
       baseLineY: 0,
       topY: 0,
       height: 0,
@@ -1045,7 +1056,7 @@ export default class SlateCanvas {
     this.#ctx.drawImage(this.#rangeOffscreenCanvas, 0, 0);
   }
 
-  setSlate(nodes: CustomDescendant[]) {
+  setSlate(nodes: Descendant[]) {
     Transforms.select(this.editor, {
       anchor: Editor.start(this.editor, []),
       focus: Editor.end(this.editor, []),

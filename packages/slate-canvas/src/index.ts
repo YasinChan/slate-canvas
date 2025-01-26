@@ -1,10 +1,14 @@
-import SlateCanvas from '@/core';
+import SlateCanvas from './core';
 
 // types
-export * from '@/types';
+export * from './types';
 
-export { ComponentBase } from '@/abstracts';
+export * from './abstracts';
 
-export { withCanvas } from '@/plugin/with-canvas';
+export * from './utils';
+
+export { withCanvas } from './plugin/with-canvas';
+
+export { CanvasEditor } from './plugin/canvas-editor';
 
 export default SlateCanvas;

@@ -1,18 +1,3 @@
-export type CustomDescendant = SlateCanvasElementType | SlateCanvasTextType;
-export type SlateCanvasElementType = {
-  type: string;
-  id?: string | number;
-  children: CustomDescendant[];
-};
-
-export type SlateCanvasTextType = {
-  bold?: boolean;
-  italic?: boolean;
-  code?: boolean;
-  size?: number;
-  text: string;
-};
-
 export type TextItemType = {
   text: string;
   font?: string;

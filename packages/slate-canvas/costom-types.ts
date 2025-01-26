@@ -1,12 +1,9 @@
-import { BaseText } from 'slate';
-import { CanvasEditor } from './src/plugin/canvas-editor';
-import { SlateCanvasElementType, SlateCanvasTextType } from './src/types';
+import { BaseEditor } from 'slate';
+import { CanvasEditor } from './src';
 
 declare module 'slate' {
   interface CustomTypes {
-    Editor: CanvasEditor;
-    Element: SlateCanvasElementType;
-    Text: SlateCanvasTextType | BaseText;
+    Editor: BaseEditor & CanvasEditor;
   }
 }
 

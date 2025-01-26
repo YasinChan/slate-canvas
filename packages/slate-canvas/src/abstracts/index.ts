@@ -1,1 +1,1 @@
-export { default as ComponentBase } from './component.abstracts';
+export { default as FontBase } from './font.abstracts';

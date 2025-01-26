@@ -34,6 +34,7 @@
     "url": "https://github.com/YasinChan/slate-canvas/issues"
   },
   "dependencies": {
+    "es-toolkit": "^1.31.0",
     "mitt": "^3.0.1",
     "slate": "^0.103.0"
   },
