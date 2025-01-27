@@ -7,6 +7,7 @@ import {
   Transforms,
   BaseEditor,
   Range,
+  Operation,
   type Descendant,
 } from 'slate';
 import {
@@ -14,7 +15,7 @@ import {
   createOffscreenCanvas,
 } from '@/components/create-canvas';
 
-import { cloneDeep } from 'es-toolkit';
+import { cloneDeep, throttle, zip } from 'es-toolkit';
 
 import mitt, { Emitter, EventType } from 'mitt';
 
@@ -24,14 +25,12 @@ import {
   setAccuracyCanvasOptions,
   createFontValue,
   initCreateFontValue,
-  throttle,
   getDPR,
-  deepClone,
   OptionsType,
   CanvasOptionsType,
 } from '@/utils';
 
-import { IS_FOCUSED, IS_RANGING } from '@/utils/weak-maps';
+import { IS_FOCUSED, IS_RANGING, EDITOR_TO_ON_CHANGE } from '@/utils/weak-maps';
 
 import { KEY_CODE_ENUM } from '@/config/key';
 import emitterMap from '@/config/emitterMap';
@@ -59,7 +58,7 @@ export default class SlateCanvas {
   #rangeOffscreenCtx: CanvasRenderingContext2D;
 
   // Converts the values in `canvasOptions` in `options` by precision.
-  #handledCanvasOptions: CanvasOptionsType = deepClone(defaultCanvasOptions);
+  #handledCanvasOptions: CanvasOptionsType = cloneDeep(defaultCanvasOptions);
   // The position at which to initially start rendering the content
   #initialPosition: { x: number; y: number } = { x: 0, y: 0 };
   // Minus padding content size
@@ -118,7 +117,7 @@ export default class SlateCanvas {
 
     (components || []).forEach((component) => {
       if (component.type === 'font') {
-        component.initialize({ test: 'test' });
+        component.initialize({ editor: this.editor, emitter: this.#emitter });
         this.#FontComponents[component.id] = component;
       }
     });
@@ -160,6 +159,12 @@ export default class SlateCanvas {
 
     this.init();
     this.listen();
+
+    return this;
+  }
+
+  get emitter() {
+    return this.#emitter;
   }
 
   /**
@@ -216,7 +221,8 @@ export default class SlateCanvas {
 
   init() {
     this.render();
-    this.onChange();
+    // this.onChange();
+    EDITOR_TO_ON_CHANGE.set(this.editor, this.onContextChange);
   }
 
   on(type: string, handler: (...args: any[]) => void) {
@@ -331,7 +337,6 @@ export default class SlateCanvas {
     // find line
     let line = this.findLineByY(offsetY);
 
-    // todo new 了当两个 canvas 的时候互相选中会报错。
     const items = this.#lines[line].items;
     const x = setAccuracy(this.editor, offsetX);
     let section: TextItemType = items[0];
@@ -453,29 +458,34 @@ export default class SlateCanvas {
     this.drawMainCanvas();
   }
 
-  onChange() {
-    this.editor.onChange = (o) => {
-      if (!o) {
-        return;
-      }
+  onContextChange: (o?: { operation?: Operation }) => void = (o) => {
+    if (!o) {
+      return;
+    }
 
-      const { operation } = o;
-      if (!operation) {
-        return;
-      }
-      switch (operation.type) {
-        case 'set_selection':
-          this.setSelection();
-          break;
-        case 'insert_text':
-        case 'remove_text':
-          this.setText(operation);
-          this.setSelection();
-          break;
-      }
+    const { operation } = o;
+    if (!operation) {
+      return;
+    }
+    switch (operation.type) {
+      case 'set_selection':
+        this.setSelection();
 
-      this.#emitter.emit(emitterMap.ON_CHANGE, o.operation);
-    };
+        this.emitter.emit(emitterMap.ON_SELECTION_CHANGE, this.editor.selection as Range)
+        break;
+      case 'insert_text':
+      case 'remove_text':
+      case 'set_node':
+      case 'split_node':
+        this.setText(operation);
+        this.setSelection();
+
+        this.emitter.emit(emitterMap.ON_VALUE_CHANGE, this.editor.children);
+        break;
+      default:
+        this.emitter.emit(emitterMap.ON_VALUE_CHANGE, this.editor.children);
+        break;
+    }
   }
 
   setSelection() {
@@ -570,9 +580,9 @@ export default class SlateCanvas {
     }
   }
   setText(operation: any) {
-    if (!operation.text) {
-      return;
-    }
+    // if (!operation.text) {
+    //   return;
+    // }
     this.render();
   }
 

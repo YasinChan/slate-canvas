@@ -1,16 +1,41 @@
 import { useRef, useState, useEffect } from 'react';
 import { withCanvas } from 'slate-canvas';
-import { createEditor } from 'slate';
+import { createEditor, Editor } from 'slate';
 import { MySlateCanvas } from './my-slate-canvas';
+import BoldIcon from './assets/svg/bold.svg?react';
+import AIcon from './assets/svg/a.svg?react';
 
 export default function App() {
   const cvs = useRef<HTMLDivElement>(null);
-  const cvs2 = useRef<HTMLDivElement>(null);
+  const cvsExample = useRef<HTMLDivElement>(null);
   const [show, setShow] = useState(false);
-  console.log('cvs', cvs);
+  const [activeTools, setActiveTools] = useState<string[]>([]);
+
+  const editorExample = useRef(withCanvas(createEditor()));
+  // @ts-expect-error disable ts
+  window.editorExample = editorExample.current;
+
+  const isMarkActive = (format: string) => {
+    const marks: any = Editor.marks(editorExample.current);
+    return marks && marks[format];
+  }
+
+  const toggleMark = (format: string) => {
+    const isActive = isMarkActive(format)
+    if (isActive) {
+      Editor.removeMark(editorExample.current, format)
+    } else {
+      if (format === 'size') {
+        Editor.addMark(editorExample.current, format, 30)
+      } else {
+        Editor.addMark(editorExample.current, format, true)
+      }
+    }
+  }
+
   useEffect(() => {
-    // 防止重复创建
-    if (cvs.current?.hasChildNodes() || cvs2.current?.hasChildNodes()) {
+    // prevent duplicate creation
+    if (cvs.current?.hasChildNodes() || cvsExample.current?.hasChildNodes()) {
       return;
     }
 
@@ -85,12 +110,7 @@ export default function App() {
     canvas!.style.backgroundColor = 'rgb(184, 190, 196)';
     cvs.current?.appendChild(canvasWrapper);
 
-    const editor2 = withCanvas(createEditor());
-
-    // @ts-expect-error disable ts
-    window.editor = editor2;
-
-    const sc2 = new MySlateCanvas(editor2, {
+    const scExample = new MySlateCanvas(editorExample.current, {
       canvasOptions: {
         width: 500,
         height: 500,
@@ -101,14 +121,23 @@ export default function App() {
       initialValue: initialValue,
     });
 
-    // @ts-expect-error disable ts
-    window.sc = sc2;
+    scExample.emitter.on('onSelectionChange', () => {
+      const marks: any = Editor.marks(editorExample.current);
+      setActiveTools(Object.keys(marks || {}));
+    })
 
-    const canvasWrapper2 = sc2.getCanvasWrapper() as HTMLDivElement;
-    const canvas2 = sc2.getCanvas() as HTMLCanvasElement;
+    // scExample.emitter.on('onValueChange', (value) => {
+    //   console.log('onValueChange11', value);
+    // })
+
+    // @ts-expect-error disable ts
+    window.sc = scExample;
+
+    const canvasWrapper2 = scExample.getCanvasWrapper() as HTMLDivElement;
+    const canvas2 = scExample.getCanvas() as HTMLCanvasElement;
     canvas2!.style.backgroundColor = 'rgb(184, 190, 196)';
-    cvs2.current?.appendChild(canvasWrapper2);
-  }, []);
+    cvsExample.current?.appendChild(canvasWrapper2);
+  }, [cvsExample]);
 
   return (
     <div className="slate-canvas">
@@ -121,7 +150,21 @@ export default function App() {
       </p>
       <div style={{ marginBottom: 40 }}>
         <h1>Let&apos;s try!</h1>
-        <div ref={cvs2}></div>
+        <div className="slate-canvas__tools">
+          <div className={`slate-canvas__tools-item ${activeTools.includes('bold') ? 'slate-canvas__tools-item--active' : ''}`}>
+            <BoldIcon onMouseDown={(e) => {
+              e.preventDefault();
+              toggleMark('bold');
+            }} />
+          </div>
+          <div className={`slate-canvas__tools-item ${activeTools.includes('size') ? 'slate-canvas__tools-item--active' : ''}`}>
+            <AIcon onMouseDown={(e) => {
+              e.preventDefault();
+              toggleMark('size');
+            }} />
+          </div>
+        </div>
+        <div ref={cvsExample}></div>
         <p>
           You can try the input and select operations here, of course, you can
           also <strong style={{ color: '#00D9C5' }}>open the console</strong> to

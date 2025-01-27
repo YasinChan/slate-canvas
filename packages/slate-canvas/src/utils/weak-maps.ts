@@ -1,4 +1,4 @@
-import { Editor, Point } from 'slate';
+import { Editor, Operation } from 'slate';
 
 export const IS_FOCUSED: WeakMap<Editor, boolean> = new WeakMap();
 
@@ -20,3 +20,8 @@ export const FONT_DEFAULT: WeakMap<
     fontFamilyDefault: string;
   }
 > = new WeakMap();
+
+export const EDITOR_TO_ON_CHANGE = new WeakMap<
+  Editor,
+  (options?: { operation?: Operation }) => void
+>()

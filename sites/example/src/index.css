@@ -67,3 +67,24 @@ textarea {
   height: 200px;
   border: 1px solid #ccc;
 }
+.slate-canvas__tools {
+  display: flex;
+  gap: 10px;
+}
+
+.slate-canvas__tools-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+}
+
+.slate-canvas__tools-item--active {
+  fill: #00D9C5;
+}

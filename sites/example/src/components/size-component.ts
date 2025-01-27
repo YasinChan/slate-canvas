@@ -3,8 +3,9 @@ import { BaseEditor, Descendant } from 'slate';
 
 export default class SizeComponent extends FontBase {
   public readonly id = 'size';
+
   initialize(): void {
-    // 实现初始化逻辑
+    // initialize
   }
 
   render(

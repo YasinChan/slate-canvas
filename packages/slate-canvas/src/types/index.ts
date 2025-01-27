@@ -1,3 +1,5 @@
+import { type Emitter } from 'mitt';
+import { BaseEditor } from 'slate';
 export type TextItemType = {
   text: string;
   font?: string;
@@ -25,5 +27,6 @@ export type CursorLocationInfoType = {
 };
 
 export type PluginProviders = {
-  test: string;
+  editor: BaseEditor;
+  emitter: Emitter<Record<string, unknown>>;
 };

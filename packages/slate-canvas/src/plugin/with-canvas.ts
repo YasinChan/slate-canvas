@@ -1,4 +1,5 @@
 import { BaseEditor, Operation } from 'slate';
+import { EDITOR_TO_ON_CHANGE } from '@/utils/weak-maps';
 
 export const withCanvas = <T extends BaseEditor>(editor: T): T => {
   const { apply, onChange } = editor;
@@ -6,9 +7,15 @@ export const withCanvas = <T extends BaseEditor>(editor: T): T => {
     // todo
     apply(op);
   };
-  editor.onChange = (options) => {
-    console.log('onChange');
+
+  editor.onChange = options => {
+    const onContextChange = EDITOR_TO_ON_CHANGE.get(editor);
+
+    if (onContextChange) {
+      onContextChange(options)
+    }
+
     onChange(options);
-  };
+  }
   return editor;
 };
