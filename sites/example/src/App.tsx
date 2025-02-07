@@ -13,7 +13,7 @@ export default function App() {
 
   const editorExample = useRef(withCanvas(createEditor()));
   // @ts-expect-error disable ts
-  window.editorExample = editorExample.current;
+  window.editor = editorExample.current;
 
   const isMarkActive = (format: string) => {
     const marks: any = Editor.marks(editorExample.current);
@@ -78,11 +78,6 @@ export default function App() {
     );
 
     console.log(
-      'You can use %csc.on("change", (o) => { console.log("change", o); }) %cto listen for changes in the editor.',
-      'color: rgb(161, 194, 129);',
-      '',
-    );
-    console.log(
       'Try %ceditor.children %chere to get slate children.',
       'color: rgb(161, 194, 129)',
       '',
@@ -125,10 +120,6 @@ export default function App() {
       const marks: any = Editor.marks(editorExample.current);
       setActiveTools(Object.keys(marks || {}));
     })
-
-    // scExample.emitter.on('onValueChange', (value) => {
-    //   console.log('onValueChange11', value);
-    // })
 
     // @ts-expect-error disable ts
     window.sc = scExample;
