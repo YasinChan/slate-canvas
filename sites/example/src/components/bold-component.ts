@@ -1,5 +1,5 @@
-import { FontBase, type CanvasOptionsType, type PluginProviders } from 'slate-canvas';
-import { BaseEditor, Editor } from 'slate';
+import { FontBase, type CanvasOptionsType } from 'slate-canvas';
+import { BaseEditor } from 'slate';
 
 export default class BoldComponent extends FontBase {
   public readonly id = 'bold';
